@@ -25,14 +25,22 @@ The full copyright and license notices are provided alongside the files as
 `Inter-OFL.txt` and `NotoSansSC-OFL.txt`. Font copyright and license metadata
 is also retained in the Chinese subsets.
 
-## Chinese subsets
+## Font subsets
 
-helloboard reuses the pinned Inter binary and complete Noto fallback above.
+HelloBoard retains the pinned Inter binary as an on-demand extended fallback.
+`tools/build_latin_fonts.py` derives an 893-character common Latin face (128,496
+bytes) from it, preserving variable axes, hinting and license metadata. It covers
+the usual English, numbers, Latin accents, punctuation and currency symbols.
+Greek, Cyrillic and other Inter characters load the original face only when used;
+the two faces have disjoint Unicode ranges. The preload requests just the core.
+
+HelloBoard also retains the complete Noto fallback above.
 The UI Noto face was rebuilt from the same pinned source with fontTools 4.67.0
 and Brotli 1.2.1 using `tools/build_fonts.py`. It retains the variable weight axis;
 the CSS uses weights 400–700. The 501-character UI subset is 130,152 bytes and
 covers the templates, JavaScript and Python messages, plus the earlier UI core.
 The full fallback retains weights 400–700. Exact, disjoint unicode ranges ensure
 that only SSIDs containing additional characters request the complete face.
-Inter is 352,240 bytes. Both font binaries are served locally with immutable,
-hashed URLs; no CDN or external request is required.
+The original Inter fallback is 352,240 bytes. All font binaries are served locally
+with immutable, hashed URLs; no CDN or external request is required. Normally the
+two preloaded core faces total 258,648 bytes.

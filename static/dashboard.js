@@ -2,8 +2,12 @@
 (() => {
   const { t } = window.HelloBoardI18n;
   const $ = (selector) => document.querySelector(selector);
+  function setText(element, value) {
+    const content = String(value ?? "—");
+    if (element.textContent !== content) element.textContent = content;
+  }
   const text = (selector, value) => {
-    $(selector).textContent = value;
+    setText($(selector), value);
   };
   let latest = null;
   let samples = [];
@@ -59,16 +63,21 @@
   }
   function rows(container, values) {
     const list = typeof container === "string" ? $(container) : container;
-    list.replaceChildren(
-      ...values.map(([label, value]) => {
-        const row = node("div");
-        const detail = node("dd");
-        if (value instanceof Node) detail.append(value);
-        else detail.textContent = value ?? "—";
-        row.append(node("dt", t(label)), detail);
-        return row;
-      }),
-    );
+    values.forEach(([label, value], index) => {
+      let row = list.children[index];
+      if (!row) {
+        row = node("div");
+        row.append(node("dt"), node("dd"));
+        list.append(row);
+      }
+      setText(row.firstChild, t(label));
+      const detail = row.lastChild;
+      if (value instanceof Node) {
+        if (detail.childNodes.length !== 1 || !detail.firstChild.isEqualNode(value))
+          detail.replaceChildren(value);
+      } else setText(detail, value);
+    });
+    while (list.children.length > values.length) list.lastChild.remove();
   }
   function donut(element, value) {
     const available = known(value);
@@ -120,7 +129,9 @@
       if (!keep.has(child)) child.remove();
   }
   const coreNodes = new Map(),
-    volumeNodes = new Map();
+    volumeNodes = new Map(),
+    interfaceNodes = new Map();
+  let serviceSignature = "";
   function renderResources(cpu, mem, volumes) {
     const coreItems = cpu.cores.map((core) => {
       if (!coreNodes.has(core.name)) {
@@ -205,11 +216,6 @@
     $("#update-state").dataset.state = state;
     $("#update-state").dataset.tone =
       state === "live" ? "positive" : state === "error" ? "warning" : "neutral";
-    $("#updated-at").textContent = latest ? clock(latest.sampled_at) : "—";
-    if (latest)
-      $("#updated-at").dateTime = new Date(
-        latest.sampled_at * 1000,
-      ).toISOString();
     refreshControl();
   }
   function refreshControl() {
@@ -261,7 +267,6 @@
       cpu = d.cpu,
       mem = d.memory,
       root = d.volumes.find((v) => v.mount === (d.primary_mount || "/")) || d.volumes[0];
-    text("#device-summary", d.device.hostname + " · " + d.device.model);
     text("#metric-cpu", percent(cpu.percent));
     text(
       "#cpu-detail",
@@ -371,26 +376,24 @@
         ["累计写入", bytes(disk.write_bytes)],
       ]),
     );
-    $("#interface-list").replaceChildren(
-      ...d.interfaces.map((iface) => {
-        const item = node("div", undefined, "interface-item");
-        const heading = node("div", undefined, "item-heading");
+    reconcile($("#interface-list"),
+      d.interfaces.map((iface) => {
+        if (!interfaceNodes.has(iface.name)) {
+          const item = node("div", undefined, "interface-item");
+          const heading = node("div", undefined, "item-heading");
+          heading.append(node("strong"), statusBadge("未知"));
+          item.append(heading, node("dl", undefined, "data-list compact-stats interface-stats"));
+          interfaceNodes.set(iface.name, item);
+        }
+        const item = interfaceNodes.get(iface.name), heading = item.firstChild;
         const state =
           { up: "在线", down: "离线", dormant: "休眠", unknown: "未知" }[
             iface.state
           ] || "未知";
-        heading.append(
-          node(
-            "strong",
-            iface.name + (iface.wireless == null ? "" : " · " + (iface.wireless ? "WiFi" : t("有线"))),
-          ),
-          statusBadge(state, iface.state === "up" ? "positive" : "neutral"),
-        );
-        const list = node(
-          "dl",
-          undefined,
-          "data-list compact-stats interface-stats",
-        );
+        setText(heading.firstChild, iface.name + (iface.wireless == null ? "" : " · " + (iface.wireless ? "WiFi" : t("有线"))));
+        setText(heading.lastChild, t(state));
+        heading.lastChild.dataset.tone = iface.state === "up" ? "positive" : "neutral";
+        const list = item.lastChild;
         rows(list, [
           ["地址", iface.addresses.join(" / ") || "—"],
           ...(iface.wireless
@@ -409,12 +412,12 @@
           ],
         ]);
         for (const row of list.children)
-          if ([t("地址"), "WiFi"].includes(row.firstChild.textContent))
-            row.className = "wide-stat";
-        item.append(heading, list);
+          row.className = [t("地址"), "WiFi"].includes(row.firstChild.textContent) ? "wide-stat" : "";
         return item;
       }),
     );
+    for (const name of interfaceNodes.keys())
+      if (!d.interfaces.some((iface) => iface.name === name)) interfaceNodes.delete(name);
     const serviceLabels = {
       active: "运行中",
       inactive: "未运行",
@@ -427,44 +430,48 @@
       "enabled-runtime": "临时启用",
       manual: "手动",
     };
-    $("#service-list").replaceChildren(
-      ...d.services.map((service) => {
-        const item = node("div", undefined, "service-item");
-        const heading = node("div", undefined, "item-heading");
-        heading.append(
-          node(
-            "strong",
-            service.name.replace(/\.service$/, ""),
-            "service-name",
-          ),
-          statusBadge(
-            serviceLabels[service.state] || "未知",
-            service.state === "active"
-              ? "positive"
-              : ["failed", "activating", "deactivating", "reloading"].includes(
-                    service.state,
-                  )
-                ? "warning"
-                : "neutral",
-          ),
-        );
-        const list = node("dl", undefined, "data-list");
-        rows(list, [
-          [
-            "开机自启",
+    const nextServices = JSON.stringify([window.HelloBoardI18n.language, d.services]);
+    if (nextServices !== serviceSignature) {
+      serviceSignature = nextServices;
+      $("#service-list").replaceChildren(
+        ...d.services.map((service) => {
+          const item = node("div", undefined, "service-item");
+          const heading = node("div", undefined, "item-heading");
+          heading.append(
             node(
-              "span",
-              t(serviceLabels[service.enabled] || service.enabled || "未知"),
-              "muted",
+              "strong",
+              service.name.replace(/\.service$/, ""),
+              "service-name",
             ),
-          ],
-        ]);
-        item.append(heading, list);
-        return item;
-      }),
-    );
-    if (!d.services.length)
-      $("#service-list").append(node("p", t("暂无数据"), "muted"));
+            statusBadge(
+              serviceLabels[service.state] || "未知",
+              service.state === "active"
+                ? "positive"
+                : ["failed", "activating", "deactivating", "reloading"].includes(
+                      service.state,
+                    )
+                  ? "warning"
+                  : "neutral",
+            ),
+          );
+          const list = node("dl", undefined, "data-list");
+          rows(list, [
+            [
+              "开机自启",
+              node(
+                "span",
+                t(serviceLabels[service.enabled] || service.enabled || "未知"),
+                "muted",
+              ),
+            ],
+          ]);
+          item.append(heading, list);
+          return item;
+        }),
+      );
+      if (!d.services.length)
+        $("#service-list").append(node("p", t("暂无数据"), "muted"));
+    }
   }
   async function update() {
     clearTimeout(timer);
@@ -550,5 +557,7 @@
     render();
   });
   window.HelloBoardI18n.applyStatic();
+  // Fetch independently: a slow system response should not hold up the list.
+  window.HelloBoardProcesses.refresh();
   update();
 })();

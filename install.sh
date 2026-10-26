@@ -30,7 +30,7 @@ if systemctl is-active --quiet helloboard.service; then
 fi
 install -d -m 755 "$target_dir"
 if [[ "$source_dir" != "$target_dir" ]]; then
-  for file in wifi.py authentication.py pam_auth.py configuration.py controller.py network.py system_metrics.py portable_metrics.py host_platform.py process_control.py requirements.txt README.md; do
+  for file in wifi.py web_assets.py authentication.py pam_auth.py configuration.py controller.py network.py system_metrics.py portable_metrics.py host_platform.py process_control.py requirements.txt README.md; do
     install -m 644 "$source_dir/$file" "$target_dir/$file"
   done
   cp -R "$source_dir/static" "$source_dir/templates" "$target_dir/"

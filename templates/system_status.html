@@ -5,11 +5,9 @@
   <body>
     {% include 'chrome.html' %}
     <main id="main" class="dashboard-shell">
-      <div class="dashboard-heading">
-        <div><h1 data-i18n="系统状态">系统状态</h1><p id="device-summary">—</p></div>
-        <div class="live-controls"><span id="update-state" role="status" data-state="loading" data-i18n="读取中">读取中</span><time id="updated-at">—</time><button id="refresh-status" type="button" class="icon-button" aria-label="刷新状态" title="刷新状态" aria-busy="false"><svg aria-hidden="true"><use href="#i-refresh" /></svg></button></div>
-      </div>
+      <h1 class="visually-hidden" data-i18n="系统状态">系统状态</h1>
       <div class="system-panel card">
+      <div class="system-panel-toolbar"><span id="update-state" class="visually-hidden" role="status" data-state="loading" data-i18n="读取中">读取中</span><button id="refresh-status" type="button" class="icon-button" aria-label="刷新状态" title="刷新状态" aria-busy="false"><svg aria-hidden="true"><use href="#i-refresh" /></svg></button></div>
       <div class="overview-grid">
         {% for key, label, detail in [('cpu','CPU','cpu-detail'),('memory','内存','memory-detail'),('storage','存储','storage-detail'),('temperature','温度','temperature-detail')] %}
         <article class="metric-card" aria-labelledby="metric-title-{{ key }}">

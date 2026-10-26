@@ -5,6 +5,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import threading
 from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
@@ -202,6 +203,57 @@ class DesktopMetricsTests(unittest.TestCase):
         self.backend.step = -2
         self.now += 2
         self.assertIsNone(self.metrics.snapshot()['interfaces'][0]['rx_rate'])
+
+    def test_desktop_readers_stay_responsive_during_optional_device_collection(self):
+        first = self.metrics.snapshot()
+        self.now += 8
+        self.backend.step += 1
+        entered, release, done = threading.Event(), threading.Event(), threading.Event()
+        original = self.backend.cpu_freq
+        results, failures = [], []
+
+        def slow_frequency():
+            entered.set()
+            if not release.wait(3):
+                raise TimeoutError('Collector was not released')
+            return original()
+
+        def collect():
+            try:
+                self.metrics._sample()
+            except Exception as error:
+                failures.append(error)
+
+        def read():
+            try:
+                results.append(self.metrics.snapshot())
+                results.append(self.metrics.process_snapshot())
+            except Exception as error:
+                failures.append(error)
+            finally:
+                done.set()
+
+        with patch.object(self.backend, 'cpu_freq', slow_frequency):
+            collector = threading.Thread(target=collect)
+            collector.start()
+            reader = None
+            try:
+                self.assertTrue(entered.wait(2))
+                reader = threading.Thread(target=read)
+                reader.start()
+                self.assertTrue(done.wait(1), 'Reader waited for an optional desktop sensor')
+                self.assertEqual(results[0], first)
+                self.assertEqual(results[1][0]['cpu_percent'], None)
+            finally:
+                release.set()
+                collector.join(3)
+                if reader:
+                    reader.join(3)
+        self.assertEqual(failures, [])
+        after = self.metrics.snapshot()
+        self.assertEqual(after['volumes'][0]['used'], 2100)
+        self.assertEqual(len(after['history']), 2)
+        self.assertEqual(self.metrics.process_snapshot()[0]['cpu_percent'], 6.2)
 
     def test_windows_routes_navigation_and_mutations_are_readonly(self):
         caps = detect_wifi(WINDOWS)

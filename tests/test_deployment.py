@@ -24,7 +24,7 @@ class DeploymentTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         self.source = self.root / 'source'
         self.source.mkdir()
-        for name in ['wifi.py','authentication.py','pam_auth.py','configuration.py','controller.py',
+        for name in ['wifi.py', 'web_assets.py','authentication.py','pam_auth.py','configuration.py','controller.py',
                      'network.py','system_metrics.py','portable_metrics.py','host_platform.py','process_control.py','requirements.txt','README.md','install.sh','update.sh']:
             shutil.copy2(ROOT / name, self.source / name)
         for name in ['static','templates','systemd','tools']:
@@ -47,6 +47,7 @@ class DeploymentTests(unittest.TestCase):
         (self.legacy / 'wifi.yaml').write_bytes(self.config)
         (self.pam / 'hellowifi').write_text('legacy policy')
         unit = (ROOT / 'systemd/helloboard.service').read_text().replace('/opt/helloboard', str(self.legacy))
+        unit = unit.replace('Environment=MALLOC_ARENA_MAX=2\n', '')
         unit = unit.replace('--port 80', '--port 80 --interface wlan9 --auth-user piuser')
         unit = unit.replace('After=network.target', 'Requires=NetworkManager.service\nAfter=NetworkManager.service')
         (self.units / 'hellosms-wifi.service').write_text(unit)
@@ -122,6 +123,7 @@ sys.exit(code)
         self.assertNotIn('hellosms-wifi', unit)
         self.assertNotIn('Requires=NetworkManager.service', unit)
         self.assertIn('Wants=NetworkManager.service', unit)
+        self.assertEqual(unit.count('Environment=MALLOC_ARENA_MAX=2'), 1)
         self.assertIn(str(self.target), (self.units / 'helloboard.service.d/custom.conf').read_text())
         self.assertTrue((self.pam / 'helloboard').exists())
         for retired in ['terminal.py','static/terminal.js','static/terminal.css','templates/terminal.html','static/vendor/xterm']:
@@ -133,6 +135,7 @@ sys.exit(code)
         result = self.run_update()
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual((self.target / 'wifi.yaml').read_bytes(), self.config)
+        self.assertEqual((self.units / 'helloboard.service').read_text().count('Environment=MALLOC_ARENA_MAX=2'), 1)
         self.assertFalse(any('backup' in p.name for p in self.root.rglob('*')))
         result = subprocess.run(['bash', str(self.target / 'update.sh')], env=self.env,
                                 text=True, capture_output=True, timeout=15)
@@ -147,6 +150,19 @@ sys.exit(code)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn(['disable','--runtime','hellosms-wifi.service'], self.state()['calls'])
         self.assertEqual(self.state()['enabled']['helloboard.service'], 'enabled-runtime')
+
+    def test_memory_setting_preserves_existing_unit_and_custom_override(self):
+        unit = self.units / 'hellosms-wifi.service'
+        unit.write_text(unit.read_text().replace('[Service]\n', '[Service]\nEnvironment=MALLOC_ARENA_MAX=4\n'))
+        custom = self.units / 'hellosms-wifi.service.d/custom.conf'
+        custom.write_text(custom.read_text() + 'Environment=MALLOC_ARENA_MAX=8\n')
+        result = self.run_update()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        updated = (self.units / 'helloboard.service').read_text()
+        self.assertIn('Environment=MALLOC_ARENA_MAX=4', updated)
+        self.assertNotIn('Environment=MALLOC_ARENA_MAX=2', updated)
+        self.assertIn('Environment=MALLOC_ARENA_MAX=8',
+            (self.units / 'helloboard.service.d/custom.conf').read_text())
 
     def test_disabled_and_runtime_autostart_are_preserved(self):
         for value in ['disabled','enabled-runtime']:
@@ -213,6 +229,7 @@ sys.exit(code)
             unit = (self.units / 'helloboard.service').read_text()
             self.assertEqual('--dashboard-only' in unit, not bool(args))
             self.assertNotIn('Requires=NetworkManager.service', unit)
+            self.assertIn('Environment=MALLOC_ARENA_MAX=2', unit)
             self.assertTrue((self.target / 'host_platform.py').exists())
             self.assertTrue((self.target / 'portable_metrics.py').exists())
             self.assertFalse(any(c[0] in ('start', 'restart', 'stop') for c in self.state()['calls']))

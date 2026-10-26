@@ -100,7 +100,11 @@ class SystemMetrics:
         self.monotonic, self.wall_time = monotonic, wall_time
         self.command = command or self._command
         self.disk_usage = disk_usage
+        # Collection may wait on hardware/commands; readers only share the short
+        # publication lock and always see a complete, independent snapshot.
         self.lock = threading.Lock()
+        self.sample_lock = threading.Lock()
+        self.published_processes = []
         self.previous_cpu, self.previous_net, self.previous_disk = {}, {}, {}
         self.previous_process = {}
         self.previous_time = None
@@ -259,86 +263,103 @@ class SystemMetrics:
             except OSError:
                 volume.update(total=None, used=None, available=None, percent=None)
 
-    def _sample(self):
-        with self.lock:
+    def _sample(self, *, blocking=True):
+        """Publish a sample; callers read through snapshot(), never a second copy."""
+        if not self.sample_lock.acquire(blocking=blocking):
+            return None
+        try:
             now = self.monotonic()
             if self.cached is not None and now - self.previous_time < self.INTERVAL:
-                return copy.deepcopy(self.cached)
-            elapsed = now - self.previous_time if self.previous_time is not None else 0
-            cpu = cpu_counters(read(self.proc / 'stat'))
-            cores = [dict(name=name, percent=cpu_usage(self.previous_cpu.get(name), values))
-                     for name, values in cpu.items() if name != 'cpu']
-            memory = memory_info(read(self.proc / 'meminfo'))
-            try:
-                uptime = float(read(self.proc / 'uptime').split()[0])
-            except (ValueError, IndexError):
-                uptime = None
-            try:
-                load = [float(v) for v in read(self.proc / 'loadavg').split()[:3]]
-            except ValueError:
-                load = []
-            policies = self.sys / 'devices/system/cpu/cpufreq'
-            frequencies = [number(p / 'scaling_cur_freq') for p in policies.glob('policy*')]
-            frequencies = [v for v in frequencies if v is not None]
-            temperature, fans, temperatures = self._sensors()
-            self._slow_sample(now)
-            self._volume_sample(now)
-            interfaces, net_now = [], {}
-            for line in read(self.proc / 'net/dev').splitlines():
-                name, sep, values = line.partition(':')
-                name = name.strip()
-                if not sep or name == 'lo':
-                    continue
-                fields = values.split()
-                if len(fields) < 16:
-                    continue
-                rx, tx = int(fields[0]), int(fields[8])
-                previous = self.previous_net.get(name)
-                net_now[name] = (rx, tx)
-                base = self.sys / 'class/net' / name
-                interfaces.append(dict(name=name, state=read(base / 'operstate') or None,
-                    wireless=(base / 'wireless').exists(), addresses=self.slow['addresses'].get(name, []),
-                    **self.slow['wireless'].get(name, dict(ssid=None, signal=None)),
-                    rx_bytes=rx, tx_bytes=tx, rx_errors=int(fields[2]), tx_errors=int(fields[10]),
-                    rx_rate=rate(rx, previous[0] if previous else None, elapsed),
-                    tx_rate=rate(tx, previous[1] if previous else None, elapsed)))
-            disks, disk_now = [], {}
-            for line in read(self.proc / 'diskstats').splitlines():
-                fields = line.split()
-                if len(fields) < 14:
-                    continue
-                name = fields[2]
-                base = self.sys / 'class/block' / name
-                if name.startswith(('loop', 'ram', 'zram')) or (base / 'partition').exists() or not (base / 'device').exists():
-                    continue
-                rx, tx = int(fields[5]) * 512, int(fields[9]) * 512
-                previous = self.previous_disk.get(name)
-                disk_now[name] = (rx, tx)
-                disks.append(dict(name=name, type=read(base / 'device/type') or None,
-                    read_bytes=rx, write_bytes=tx,
-                    read_rate=rate(rx, previous[0] if previous else None, elapsed),
-                    write_rate=rate(tx, previous[1] if previous else None, elapsed)))
-            cpu_total = cpu.get('cpu', (0, 0))[0]
-            self._process_sample(now, cpu_total)
-            self.cached = dict(sampled_at=self.wall_time(), interval_seconds=self.INTERVAL, primary_mount='/',
-                device=self.slow['device'], uptime_seconds=uptime,
-                cpu=dict(percent=cpu_usage(self.previous_cpu.get('cpu'), cpu['cpu']) if 'cpu' in cpu else None,
-                         cores=cores, count=len(cores) or os.cpu_count(), load=load,
-                         frequency_mhz=round(sum(frequencies) / len(frequencies) / 1000) if frequencies else None),
-                memory=memory, temperature_c=temperature, temperatures=temperatures, fans=fans,
-                volumes=self.slow['volumes'], disks=disks, interfaces=interfaces,
-                services=self.slow['services'], power=self.slow['power'], process_count=self.process_count,
-                processes={key: [{k: item[k] for k in ('pid', 'name', 'cpu_percent', 'memory')}
-                                 for item in sorted(self.processes, key=sort, reverse=True)[:8]]
-                           for key, sort in [('cpu', lambda p: p['cpu_percent'] or 0),
-                                             ('memory', lambda p: p['memory'])]})
-            self.previous_cpu, self.previous_net, self.previous_disk = cpu, net_now, disk_now
-            self.previous_time = now
-            self._record_history()
-            return copy.deepcopy(self.cached)
+                return None
+            sample = self._collect(now)
+            # Detach slow metadata (especially volumes) before publishing: the
+            # next collection may update its working data while readers run.
+            published = copy.deepcopy(sample)
+            with self.lock:
+                self.cached = published
+                # Process collection builds a new list with new records. Keep
+                # that completed list alive until the next one is published;
+                # process_snapshot() still gives each reader its own copy.
+                self.published_processes = self.processes
+                self.previous_time = now
+                self._record_history()
+        finally:
+            self.sample_lock.release()
+
+    def _collect(self, now):
+        elapsed = now - self.previous_time if self.previous_time is not None else 0
+        cpu = cpu_counters(read(self.proc / 'stat'))
+        cores = [dict(name=name, percent=cpu_usage(self.previous_cpu.get(name), values))
+                 for name, values in cpu.items() if name != 'cpu']
+        memory = memory_info(read(self.proc / 'meminfo'))
+        try:
+            uptime = float(read(self.proc / 'uptime').split()[0])
+        except (ValueError, IndexError):
+            uptime = None
+        try:
+            load = [float(v) for v in read(self.proc / 'loadavg').split()[:3]]
+        except ValueError:
+            load = []
+        policies = self.sys / 'devices/system/cpu/cpufreq'
+        frequencies = [number(p / 'scaling_cur_freq') for p in policies.glob('policy*')]
+        frequencies = [v for v in frequencies if v is not None]
+        temperature, fans, temperatures = self._sensors()
+        self._slow_sample(now)
+        self._volume_sample(now)
+        interfaces, net_now = [], {}
+        for line in read(self.proc / 'net/dev').splitlines():
+            name, sep, values = line.partition(':')
+            name = name.strip()
+            if not sep or name == 'lo':
+                continue
+            fields = values.split()
+            if len(fields) < 16:
+                continue
+            rx, tx = int(fields[0]), int(fields[8])
+            previous = self.previous_net.get(name)
+            net_now[name] = (rx, tx)
+            base = self.sys / 'class/net' / name
+            interfaces.append(dict(name=name, state=read(base / 'operstate') or None,
+                wireless=(base / 'wireless').exists(), addresses=self.slow['addresses'].get(name, []),
+                **self.slow['wireless'].get(name, dict(ssid=None, signal=None)),
+                rx_bytes=rx, tx_bytes=tx, rx_errors=int(fields[2]), tx_errors=int(fields[10]),
+                rx_rate=rate(rx, previous[0] if previous else None, elapsed),
+                tx_rate=rate(tx, previous[1] if previous else None, elapsed)))
+        disks, disk_now = [], {}
+        for line in read(self.proc / 'diskstats').splitlines():
+            fields = line.split()
+            if len(fields) < 14:
+                continue
+            name = fields[2]
+            base = self.sys / 'class/block' / name
+            if name.startswith(('loop', 'ram', 'zram')) or (base / 'partition').exists() or not (base / 'device').exists():
+                continue
+            rx, tx = int(fields[5]) * 512, int(fields[9]) * 512
+            previous = self.previous_disk.get(name)
+            disk_now[name] = (rx, tx)
+            disks.append(dict(name=name, type=read(base / 'device/type') or None,
+                read_bytes=rx, write_bytes=tx,
+                read_rate=rate(rx, previous[0] if previous else None, elapsed),
+                write_rate=rate(tx, previous[1] if previous else None, elapsed)))
+        cpu_total = cpu.get('cpu', (0, 0))[0]
+        self._process_sample(now, cpu_total)
+        sample = dict(sampled_at=self.wall_time(), interval_seconds=self.INTERVAL, primary_mount='/',
+            device=self.slow['device'], uptime_seconds=uptime,
+            cpu=dict(percent=cpu_usage(self.previous_cpu.get('cpu'), cpu['cpu']) if 'cpu' in cpu else None,
+                     cores=cores, count=len(cores) or os.cpu_count(), load=load,
+                     frequency_mhz=round(sum(frequencies) / len(frequencies) / 1000) if frequencies else None),
+            memory=memory, temperature_c=temperature, temperatures=temperatures, fans=fans,
+            volumes=self.slow['volumes'], disks=disks, interfaces=interfaces,
+            services=self.slow['services'], power=self.slow['power'], process_count=self.process_count,
+            processes={key: [{k: item[k] for k in ('pid', 'name', 'cpu_percent', 'memory')}
+                             for item in sorted(self.processes, key=sort, reverse=True)[:8]]
+                       for key, sort in [('cpu', lambda p: p['cpu_percent'] or 0),
+                                         ('memory', lambda p: p['memory'])]})
+        self.previous_cpu, self.previous_net, self.previous_disk = cpu, net_now, disk_now
+        return sample
 
     def _record_history(self):
-        """Called under the sampling lock by either platform collector."""
+        """Publish history under the same lock as its matching snapshot."""
         def total_rate(key):
             values = [item[key] for item in self.cached['interfaces'] if item[key] is not None]
             return round(sum(values), 1) if values else None
@@ -355,8 +376,11 @@ class SystemMetrics:
             needs_sample = (self.cached is None or not self.sampler_thread
                             or not self.sampler_thread.is_alive()
                             or self.monotonic() - self.previous_time > self.INTERVAL * 3)
+            cold = self.cached is None
         if needs_sample:
-            self._sample()
+            # Only the first ever sample must wait. During a slow refresh serve
+            # the last completed sample rather than queue browser requests.
+            self._sample(blocking=cold)
         with self.lock:
             # The generation changes after a service restart. Old cursors then
             # receive a full history, even if the wall clock moved backwards.
@@ -380,7 +404,7 @@ class SystemMetrics:
         if self.cached is None:
             self.snapshot()
         with self.lock:
-            return copy.deepcopy(self.processes)
+            return copy.deepcopy(self.published_processes)
 
     def _run(self):
         while not self.stop_event.is_set():

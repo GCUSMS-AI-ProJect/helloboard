@@ -168,6 +168,85 @@ class MetricsTests(unittest.TestCase):
             processes[0]['name']='modified by caller'
             self.assertNotEqual(self.metrics.process_snapshot()[0]['name'],'modified by caller')
 
+    def test_readers_do_not_wait_or_observe_partial_collection(self):
+        first = self.metrics.snapshot()
+        first_processes = self.metrics.process_snapshot()
+        self.now += 8  # Also exercise the stale-sampler fallback path.
+        Usage = namedtuple('Usage', 'total used free')
+        self.metrics.disk_usage = lambda mount: Usage(10000, 5000, 4000)
+        self.write('proc/123/stat', self.stat('new worker', 30, 100, 4))
+        entered, release, read_done = threading.Event(), threading.Event(), threading.Event()
+        original = self.metrics._process_sample
+        results, failures = [], []
+
+        def delayed_process_sample(*args):
+            original(*args)  # Working volume/process data has already changed.
+            entered.set()
+            if not release.wait(3):
+                raise TimeoutError('Test did not release the collector')
+
+        def collect():
+            try:
+                self.metrics._sample()
+            except Exception as error:
+                failures.append(error)
+
+        def read_snapshot():
+            try:
+                results.append(self.metrics.snapshot(since=first['sampled_at'],
+                    history_id=first['history_id']))
+                results.append(self.metrics.process_snapshot())
+            except Exception as error:
+                failures.append(error)
+            finally:
+                read_done.set()
+
+        with patch.object(self.metrics, '_process_sample', delayed_process_sample):
+            collector = threading.Thread(target=collect)
+            collector.start()
+            reader = None
+            try:
+                self.assertTrue(entered.wait(2))
+                reader = threading.Thread(target=read_snapshot)
+                reader.start()
+                self.assertTrue(read_done.wait(1), 'Reader waited for unfinished collection')
+                self.assertEqual(results[0]['sampled_at'], first['sampled_at'])
+                self.assertEqual(results[0]['volumes'], first['volumes'])
+                self.assertEqual(results[0]['history'], [])
+                self.assertEqual(results[1], first_processes)
+            finally:
+                release.set()
+                collector.join(3)
+                if reader:
+                    reader.join(3)
+        self.assertEqual(failures, [])
+        after = self.metrics.snapshot(since=first['sampled_at'], history_id=first['history_id'])
+        self.assertEqual(after['volumes'][0]['percent'], 50)
+        self.assertEqual(len(after['history']), 1)
+        self.assertEqual(after['history'][0]['time'], after['sampled_at'])
+        self.assertEqual(self.metrics.process_snapshot()[0]['name'], 'new worker')
+
+    def test_failed_collection_preserves_published_data_and_releases_collector(self):
+        first = self.metrics.snapshot()
+        first_processes = self.metrics.process_snapshot()
+        self.now += 2
+
+        def failed_collect(now):
+            self.metrics.slow['volumes'][0]['used'] = -1
+            self.metrics.processes = []
+            raise OSError('Optional device disconnected')
+
+        with patch.object(self.metrics, '_collect', failed_collect):
+            with self.assertRaises(OSError):
+                self.metrics._sample()
+        self.assertEqual(self.metrics.cached['volumes'], first['volumes'])
+        self.assertEqual(self.metrics.process_snapshot(), first_processes)
+        self.assertEqual(list(self.metrics.history), first['history'])
+        self.assertEqual(self.metrics.previous_time, self.now - 2)
+        self.assertTrue(self.metrics.sample_lock.acquire(blocking=False))
+        self.metrics.sample_lock.release()
+        self.assertGreater(self.metrics.snapshot()['sampled_at'], first['sampled_at'])
+
     def test_volume_capacity_updates_on_normal_sampling_without_extra_commands(self):
         self.metrics.snapshot()
         calls=len(self.commands)

@@ -54,7 +54,8 @@ def main():
     css = re.sub(r'noto-sans-sc-core\.[a-f0-9]+\.woff2', name, css)
     # First Chinese face is the small UI font; the complete face is only requested
     # when an SSID contains characters absent from the UI repertoire.
-    matches = list(re.finditer(r'unicode-range:\s*[^;]+;', css))
+    matches = [match for face in re.finditer(r"@font-face\s*\{[^}]*font-family:\s*'HelloBoard Noto Sans SC';[^}]*\}", css)
+               for match in re.compile(r'unicode-range:\s*[^;]+;').finditer(css, face.start(), face.end())]
     for match, value in reversed(list(zip(matches, [ranges(points), ranges(fallback_points)]))):
         css = css[:match.start()] + 'unicode-range: ' + value + ';' + css[match.end():]
     (FONTS / 'fonts.css').write_text(css)

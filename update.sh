@@ -35,7 +35,7 @@ if [[ ! -x "$installed_dir/.venv/bin/python" || ! -f "$installed_dir/wifi.yaml" 
   exit 1
 fi
 "$installed_dir/.venv/bin/python" -c 'import flask, yaml, waitress'
-for item in wifi.py authentication.py pam_auth.py configuration.py controller.py network.py system_metrics.py portable_metrics.py host_platform.py process_control.py requirements.txt README.md install.sh update.sh static templates systemd/helloboard.service systemd/helloboard.pam tools/relocate_venv.py tools/install_pam.py; do
+for item in wifi.py web_assets.py authentication.py pam_auth.py configuration.py controller.py network.py system_metrics.py portable_metrics.py host_platform.py process_control.py requirements.txt README.md install.sh update.sh static templates systemd/helloboard.service systemd/helloboard.pam tools/relocate_venv.py tools/install_pam.py; do
   [[ -e "$source_dir/$item" ]] || { echo "更新文件缺失：$item" >&2; exit 1; }
 done
 # Install new dependencies before stopping the running service. A download failure
@@ -72,7 +72,7 @@ if $migrating; then
 fi
 
 if [[ "$source_dir" != "$target_dir" ]]; then
-  for file in wifi.py authentication.py pam_auth.py configuration.py controller.py network.py system_metrics.py portable_metrics.py host_platform.py process_control.py requirements.txt README.md; do
+  for file in wifi.py web_assets.py authentication.py pam_auth.py configuration.py controller.py network.py system_metrics.py portable_metrics.py host_platform.py process_control.py requirements.txt README.md; do
     install -m 644 "$source_dir/$file" "$target_dir/$file"
   done
   for file in install.sh update.sh; do
@@ -99,6 +99,11 @@ for unit in "$unit_dir/$service" "$unit_dir/$service.d/"*.conf; do
 done
 sed -i 's/^Description=.*/Description=HelloBoard system dashboard/' "$unit_dir/$service"
 sed -i 's/^Requires=NetworkManager.service$/Wants=NetworkManager.service/' "$unit_dir/$service"
+# Bound glibc's per-thread heap pools without reducing HTTP worker threads.
+# Preserve an explicit setting in the existing unit; drop-ins still take priority.
+if ! grep -q '^Environment=.*MALLOC_ARENA_MAX=' "$unit_dir/$service"; then
+  sed -i '/^\[Service\]$/a Environment=MALLOC_ARENA_MAX=2' "$unit_dir/$service"
+fi
 python3 "$target_dir/tools/install_pam.py"
 systemctl daemon-reload
 case "$enabled_state" in

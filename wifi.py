@@ -15,6 +15,7 @@ from configuration import ConfigStore
 from controller import BusyError, WifiController
 from network import NetworkError, NetworkManager
 from host_platform import identity, detect_wifi, make_metrics, make_authenticator, DashboardController
+from web_assets import install_assets
 
 ROOT = Path(__file__).resolve().parent
 
@@ -76,10 +77,18 @@ def create_app(controller, *, authenticator=None, metrics=None, processes=None, 
                 if not secrets.compare_digest(request.headers.get('X-CSRF-Token', ''), session.get('csrf', '-') ):
                     return jsonify(error='页面已过期，请刷新后重试。', csrf_expired=True), 403
 
+    assets = install_assets(app)
+
     @app.after_request
     def headers(response):
         # Versioned font binaries are immutable; API/configuration remains private.
-        if request.path.startswith('/static/fonts/') and request.path.endswith('.woff2'):
+        if response.status_code >= 400:
+            response.headers['Cache-Control'] = 'no-store'
+        elif request.path.startswith('/static/fonts/') and request.path.endswith('.woff2'):
+            response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
+        elif (request.endpoint == 'static'
+              and (asset := assets.get((request.view_args or {}).get('filename')))
+              and request.args.get('v') == asset.version):
             response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
         elif request.path.startswith('/static/'):
             response.headers['Cache-Control'] = 'public, no-cache'
