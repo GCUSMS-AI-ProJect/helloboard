@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="zh-CN" data-layout="compact">
+  {% set page_name = 'WiFi 管理' %}{% set page_script = 'app.js' %}
+  {% include 'head.html' %}
+  <body>
+    {% include 'chrome.html' %}
+      <main id="main" class="shell">
+        <div id="notice" class="notice" role="status" hidden></div>
+        <div class="network-card card" id="network-settings">
+          <section class="status-card" aria-labelledby="status-title">
+            <div class="status-symbol">
+              <svg aria-hidden="true"><use href="#i-wifi" /></svg>
+            </div>
+            <div class="status-copy">
+              <div class="status-heading">
+                <h2 id="status-title">
+                  <span data-i18n="正在读取网络">正在读取网络</span>
+                </h2>
+                <span id="status-badge" class="badge"
+                  ><span data-i18n="读取中">读取中</span></span
+                >
+              </div>
+              <div class="connection-line">
+                <p id="connection-name">—</p>
+                <div
+                  id="connection-password-area"
+                  class="connection-password-area"
+                  hidden
+                >
+                  <span id="connection-secret">••••••••</span
+                  ><button
+                    id="reveal-password"
+                    type="button"
+                    class="icon-button small"
+                    aria-label="查看 Wi-Fi 密码"
+                    aria-pressed="false"
+                  >
+                    <svg aria-hidden="true"><use href="#i-eye" /></svg>
+                  </button>
+                </div>
+              </div>
+              <div class="address">
+                <div>
+                  <a
+                    id="device-address"
+                    aria-label="当前设备地址"
+                    data-i18n-aria-label="当前设备地址"
+                    >—</a
+                  ><button
+                    id="copy-address"
+                    class="icon-button small"
+                    aria-label="复制设备地址"
+                    data-i18n-aria-label="复制设备地址"
+                    title="复制地址"
+                    data-i18n-title="复制地址"
+                    disabled
+                  >
+                    <svg aria-hidden="true"><use href="#i-copy" /></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+          <div class="workspace">
+            <section class="settings" aria-labelledby="settings-title">
+              <div class="card-heading">
+                <h2 id="settings-title">
+                  <span data-i18n="连接配置">连接配置</span>
+                </h2>
+              </div>
+              <div
+                class="mode-switch"
+                data-mode="lan"
+                role="group"
+                aria-label="网络模式"
+                data-i18n-aria-label="网络模式"
+              >
+                <button
+                  id="mode-lan"
+                  type="button"
+                  class="mode-button selected"
+                  aria-pressed="true"
+                >
+                  <svg aria-hidden="true"><use href="#i-wifi" /></svg
+                  ><span data-i18n="局域网">局域网</span>
+                </button>
+                <button
+                  id="mode-ap"
+                  type="button"
+                  class="mode-button"
+                  aria-pressed="false"
+                >
+                  <svg aria-hidden="true"><use href="#i-hotspot" /></svg
+                  ><span data-i18n="设备热点">设备热点</span>
+                </button>
+              </div>
+              <form id="connect-form">
+                <div id="lan-fields">
+                  <label for="ssid"
+                    ><span data-i18n="Wi-Fi 名称">Wi-Fi 名称</span></label
+                  >
+                  <div class="ssid-field">
+                    <div class="ssid-input">
+                      <input
+                        id="ssid"
+                        name="ssid"
+                        placeholder="选择或输入 Wi-Fi"
+                        data-i18n-placeholder="选择或输入 Wi-Fi"
+                        autocomplete="off"
+                        required
+                        maxlength="32"
+                        role="combobox"
+                        aria-expanded="false"
+                        aria-autocomplete="list"
+                        aria-controls="saved-network-menu"
+                      /><button
+                        id="saved-network-toggle"
+                        class="icon-button"
+                        type="button"
+                        aria-label="选择已保存的网络"
+                        data-i18n-aria-label="选择已保存的网络"
+                        aria-expanded="false"
+                        aria-controls="saved-network-menu"
+                      >
+                        <svg aria-hidden="true"><use href="#i-chevron" /></svg>
+                      </button>
+                    </div>
+                    <ul
+                      id="saved-network-menu"
+                      class="saved-network-menu"
+                      role="listbox"
+                      aria-label="已保存的网络"
+                      data-i18n-aria-label="已保存的网络"
+                      hidden
+                    ></ul>
+                  </div>
+                  <label for="password"
+                    ><span data-i18n="Wi-Fi 密码">Wi-Fi 密码</span></label
+                  >
+                  <div class="password-field">
+                    <input
+                      id="password"
+                      name="password"
+                      type="password"
+                      placeholder="输入网络密码"
+                      data-i18n-placeholder="输入网络密码"
+                      autocomplete="new-password"
+                      maxlength="64"
+                    /><button
+                      id="show-password"
+                      type="button"
+                      class="icon-button"
+                      aria-label="显示密码"
+                      data-i18n-aria-label="显示密码"
+                      aria-pressed="false"
+                    >
+                      <svg aria-hidden="true"><use href="#i-eye" /></svg>
+                    </button>
+                  </div>
+                  <label class="checkbox"
+                    ><input id="open-network" type="checkbox" /><span
+                      data-i18n="开放网络"
+                      >开放网络</span
+                    ></label
+                  >
+                </div>
+                <div id="ap-fields" hidden>
+                  <dl>
+                    <div>
+                      <dt><span data-i18n="热点名称">热点名称</span></dt>
+                      <dd id="ap-name">hellosms</dd>
+                    </div>
+                    <div>
+                      <dt><span data-i18n="访问地址">访问地址</span></dt>
+                      <dd id="ap-address">192.168.11.17</dd>
+                    </div>
+                    <div class="ap-secret-row">
+                      <dt><span data-i18n="热点密码">热点密码</span></dt>
+                      <dd class="ap-secret">
+                        <span id="ap-security">—</span>
+                        <button
+                          id="reveal-ap-password"
+                          type="button"
+                          class="icon-button small"
+                          aria-label="显示 AP 密码"
+                          aria-pressed="false"
+                          disabled
+                        >
+                          <svg aria-hidden="true"><use href="#i-eye" /></svg>
+                        </button>
+                      </dd>
+                    </div>
+                  </dl>
+                  <button
+                    type="button"
+                    class="secondary-button ap-settings-link"
+                    data-panel="ap"
+                  >
+                    <svg aria-hidden="true"><use href="#i-key" /></svg
+                    ><span data-i18n="设置密码">设置密码</span>
+                  </button>
+                </div>
+                <button
+                  id="connect-button"
+                  class="primary-button"
+                  type="submit"
+                >
+                  <span data-i18n="保存并连接">保存并连接</span>
+                </button>
+              </form>
+            </section>
+            <section class="nearby" aria-labelledby="nearby-title">
+              <div class="card-heading">
+                <h2 id="nearby-title">
+                  <span data-i18n="附近的 WiFi">附近的 WiFi</span>
+                </h2>
+              </div>
+              <div class="scan-summary">
+                <p id="scan-message" class="helper" role="status">
+                  <span data-i18n="正在扫描…">正在扫描…</span>
+                </p>
+                <button
+                  id="scan-button"
+                  class="icon-button"
+                  type="button"
+                  aria-label="扫描 Wi-Fi"
+                  data-i18n-aria-label="扫描 Wi-Fi"
+                  title="重新扫描"
+                  data-i18n-title="重新扫描"
+                >
+                  <svg aria-hidden="true"><use href="#i-refresh" /></svg>
+                </button>
+              </div>
+              <ul
+                id="network-list"
+                class="network-list"
+                tabindex="0"
+                aria-labelledby="nearby-title"
+              ></ul>
+              <div id="scan-empty" class="empty-state">
+                <svg aria-hidden="true"><use href="#i-wifi" /></svg>
+                <p><span data-i18n="暂无可用网络">暂无可用网络</span></p>
+              </div>
+            </section>
+          </div>
+        </div>
+      </main>
+    </div>
+    <dialog id="side-panel" class="side-panel" aria-labelledby="panel-title">
+      <div class="dialog-heading">
+        <h2 id="panel-title"><span data-i18n="使用帮助">使用帮助</span></h2>
+        <button
+          type="button"
+          id="panel-close"
+          class="icon-button"
+          aria-label="关闭侧栏"
+          data-i18n-aria-label="关闭侧栏"
+        >
+          <svg aria-hidden="true"><use href="#i-close" /></svg>
+        </button>
+      </div>
+      <section id="help-content" class="drawer-content">
+        <h3>
+          <span data-i18n="切换网络后，如何访问？">切换网络后，如何访问？</span>
+        </h3>
+        <p>
+          <span
+            data-i18n="连接 Wi-Fi 后，让手机或电脑也加入同一网络，再使用设备的新 IP 访问。可在路由器的设备列表中查找 IP。"
+            >连接 Wi-Fi 后，让手机或电脑也加入同一网络，再使用设备的新 IP
+            访问。可在路由器的设备列表中查找 IP。</span
+          >
+        </p>
+        <h3><span data-i18n="如何连接设备热点？">如何连接设备热点？</span></h3>
+        <p>
+          <span data-i18n="连接页面显示的设备热点，再打开 http://"
+            >连接页面显示的设备热点，再打开 http://</span
+          ><span id="help-ap-address">192.168.11.17</span
+          ><span
+            data-i18n="。未配置 AP 密码时热点无密码；设置密码后，下次开启热点或重启服务时生效。"
+            >。未配置 AP
+            密码时热点无密码；设置密码后，下次开启热点或重启服务时生效。</span
+          >
+        </p>
+        <h3>
+          <span data-i18n="网络和密码会保存吗？">网络和密码会保存吗？</span>
+        </h3>
+        <p>
+          <span
+            data-i18n="连接成功后，名称和密码自动保存在设备本地 YAML 中。下次打开会自动选中最近使用的网络，也可以从名称输入框右侧选择其他已保存的网络。密码框留空即可复用已保存密码。"
+            >连接成功后，名称和密码自动保存在设备本地 YAML
+            中。下次打开会自动选中最近使用的网络，也可以从名称输入框右侧选择其他已保存的网络。密码框留空即可复用已保存密码。</span
+          >
+        </p>
+        <h3><span data-i18n="连接失败怎么办？">连接失败怎么办？</span></h3>
+        <p>
+          <span
+            data-i18n="设备会恢复热点，原有网络配置保留。连接热点后可重新设置。部分网卡在热点模式只能显示缓存扫描结果，也可以手动输入网络名称。"
+            >设备会恢复热点，原有网络配置保留。连接热点后可重新设置。部分网卡在热点模式只能显示缓存扫描结果，也可以手动输入网络名称。</span
+          >
+        </p>
+      </section>
+      <section id="ap-content" class="drawer-content" hidden>
+        <form id="ap-password-form">
+          <label for="ap-password"
+            ><span data-i18n="AP 密码">AP 密码</span></label
+          >
+          <div class="password-field">
+            <input
+              id="ap-password"
+              name="ap-password"
+              type="password"
+              placeholder="至少 8 个字符"
+              data-i18n-placeholder="至少 8 个字符"
+              autocomplete="new-password"
+              minlength="8"
+              maxlength="64"
+              required
+              aria-describedby="ap-password-help ap-password-error"
+            /><button
+              id="show-ap-password"
+              type="button"
+              class="icon-button"
+              aria-label="显示 AP 密码"
+              data-i18n-aria-label="显示 AP 密码"
+              aria-pressed="false"
+            >
+              <svg aria-hidden="true"><use href="#i-eye" /></svg>
+            </button>
+          </div>
+          <p id="ap-password-help" class="helper">
+            <span
+              data-i18n="8–63 位英文字母、数字或符号，也支持 64 位十六进制密钥。保存后，下次开启热点或重启服务时使用。"
+              >8–63 位英文字母、数字或符号，也支持 64
+              位十六进制密钥。保存后，下次开启热点或重启服务时使用。</span
+            >
+          </p>
+          <p id="ap-auth-state" class="helper"></p>
+          <p id="ap-password-state" class="helper"></p>
+          <p id="ap-password-error" class="field-error" role="alert" hidden></p>
+          <button id="save-ap-password" class="primary-button" type="submit">
+            <svg aria-hidden="true"><use href="#i-check" /></svg
+            ><span data-i18n="保存密码">保存密码</span>
+          </button>
+        </form>
+      </section>
+      {% include 'layout_options.html' %}
+    </dialog>
+    <dialog id="authorize-dialog" aria-labelledby="authorize-title">
+      <div class="dialog-heading">
+        <h2 id="authorize-title">
+          <span data-i18n="验证登录">验证登录</span>
+        </h2>
+        <button
+          id="authorize-close"
+          type="button"
+          class="icon-button borderless"
+          aria-label="关闭"
+          data-i18n-aria-label="关闭"
+        >
+          <svg aria-hidden="true"><use href="#i-close" /></svg>
+        </button>
+      </div>
+      <form id="authorize-form">
+        <label for="auth-username"
+          ><span data-i18n="系统用户名">系统用户名</span></label
+        ><input
+          id="auth-username"
+          name="username"
+          autocomplete="username"
+          value="{{ login_user }}"
+          required
+          maxlength="128"
+        />
+        <label for="auth-password"
+          ><span data-i18n="系统登录密码">系统登录密码</span></label
+        ><input
+          id="auth-password"
+          name="password"
+          type="password"
+          autocomplete="current-password"
+          required
+          maxlength="512"
+        />
+        <p id="auth-error" class="field-error" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button id="authorize-cancel" type="button" class="secondary-button">
+            <span data-i18n="取消">取消</span></button
+          ><button id="authorize-submit" type="submit" class="primary-button">
+            <span data-i18n="验证">验证</span>
+          </button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="confirm-dialog" aria-labelledby="confirm-title">
+      <div class="dialog-heading">
+        <h2 id="confirm-title">
+          <span data-i18n="准备切换网络">准备切换网络</span>
+        </h2>
+        <button
+          type="button"
+          class="icon-button"
+          id="confirm-close"
+          aria-label="关闭"
+          data-i18n-aria-label="关闭"
+        >
+          <svg aria-hidden="true"><use href="#i-close" /></svg>
+        </button>
+      </div>
+      <p id="confirm-message"></p>
+      <div class="dialog-actions">
+        <button id="cancel-switch" class="secondary-button">
+          <span data-i18n="取消">取消</span></button
+        ><button id="confirm-switch" class="primary-button">
+          <span data-i18n="确认切换">确认切换</span>
+        </button>
+      </div>
+    </dialog>
+    <div id="toast" class="toast" role="status" hidden></div>
+  </body>
+</html>

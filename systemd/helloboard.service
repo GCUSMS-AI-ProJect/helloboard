@@ -1,0 +1,24 @@
+[Unit]
+Description=HelloBoard system dashboard
+After=network.target
+StartLimitIntervalSec=120
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/helloboard
+ExecStart=/opt/helloboard/.venv/bin/python /opt/helloboard/wifi.py --port 80 --dashboard-only
+Restart=on-failure
+RestartSec=8
+TimeoutStopSec=15
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/opt/helloboard
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+
+[Install]
+WantedBy=multi-user.target

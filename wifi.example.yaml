@@ -1,0 +1,11 @@
+# 仅为格式示例。程序首次运行会自动创建 wifi.yaml。
+# 请勿将真实网络密码提交到仓库。
+mode: ap
+lan:
+  ssid: ""
+  password: ""
+ap:
+  ssid: hellosms
+  password: ""
+  address: 192.168.11.17
+networks: []

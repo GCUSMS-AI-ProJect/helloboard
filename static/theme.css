@@ -1,0 +1,159 @@
+/* Semantic colors shared by WiFi, dashboard, dialogs and native controls. */
+:root {
+  color-scheme: light;
+  --background: #f5f5f7;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-muted: #f5f5f7;
+  --surface-track: #f0f0f3;
+  --surface-hover: #f2f2f5;
+  --surface-selected: #eaeaec;
+  --segment-selected: #ffffff;
+  --chrome: #fbfbfc;
+  --brand-bg: #1d1d1f;
+  --brand-ink: #ffffff;
+  --text: #1d1d1f;
+  --muted: #68686d;
+  --placeholder: #737379;
+  --disabled-text: #8b8b94;
+  --border: #e5e5e9;
+  --panel-border: #e8e8ed;
+  --control-border: #89898f;
+  --focus: #66666b;
+  --focus-halo: #1d1d1f12;
+  --line-color: #dcdce1;
+  --primary-bg: #1d1d1f;
+  --primary-hover: #38383b;
+  --on-primary: #ffffff;
+  --pill-hover: #ffffff0a;
+  --row-highlight: #1d1d1f06;
+  --positive: #236847;
+  --positive-bg: #edf6f0;
+  --warning: #95540f;
+  --warning-bg: #fff3e5;
+  --danger: #b62525;
+  --danger-bg: #fff0f0;
+  --neutral: #65656b;
+  --neutral-bg: #f0f0f3;
+  --tooltip-bg: #29292c;
+  --on-tooltip: #ffffff;
+  --preview-line: #9d9da5;
+  --donut-track: #eaeaf0;
+  --donut-cpu: #525762;
+  --donut-memory: #637790;
+  --donut-storage: #79857a;
+  --chart-primary: #313136;
+  --chart-secondary: #7a8b9f;
+  --chart-grid: #ededf0;
+  --scrim: #00000055;
+  --shadow-soft: #1d1d1f05;
+  --shadow-small: #1d1d1f12;
+  --shadow-menu: #00000012;
+  --shadow-dialog: #00000024;
+  --shadow-toast: #00000022;
+  --line: linear-gradient(90deg, transparent, var(--line-color) 16%, var(--line-color) 84%, transparent);
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #14171c;
+  --surface: #1f232a;
+  --surface-raised: #292e37;
+  --surface-muted: #292f39;
+  --surface-track: #303743;
+  --surface-hover: #353e4c;
+  --surface-selected: #3b4554;
+  --segment-selected: #3e495a;
+  --chrome: #1a1e25;
+  --text: #edf1f7;
+  --muted: #b0bac9;
+  --placeholder: #a5b0c1;
+  --disabled-text: #929eaf;
+  --border: #444d5c;
+  --panel-border: #424b59;
+  --control-border: #778496;
+  --focus: #bdd2f3;
+  --focus-halo: #bdd2f32b;
+  --line-color: #475160;
+  --primary-bg: #e7edf6;
+  --primary-hover: #ffffff;
+  --on-primary: #141a23;
+  --pill-hover: #0000000a;
+  --row-highlight: #ffffff10;
+  --positive: #8cdbaf;
+  --positive-bg: #213b2f;
+  --warning: #f2c77f;
+  --warning-bg: #403320;
+  --danger: #ffabab;
+  --danger-bg: #472a31;
+  --neutral: #bac4d3;
+  --neutral-bg: #303743;
+  --tooltip-bg: #e3eaf4;
+  --on-tooltip: #171d27;
+  --preview-line: #acb9cc;
+  --donut-track: #414b5b;
+  --donut-cpu: #c8d3e3;
+  --donut-memory: #a5c2e9;
+  --donut-storage: #accfb8;
+  --chart-primary: #e1e9f5;
+  --chart-secondary: #a5c2e9;
+  --chart-grid: #414b5b;
+  --scrim: #00000099;
+  --shadow-soft: #00000020;
+  --shadow-small: #00000044;
+  --shadow-menu: #00000066;
+  --shadow-dialog: #00000088;
+  --shadow-toast: #00000066;
+}
+dialog,
+.saved-network-menu {
+  background: var(--surface-raised);
+}
+input,
+button {
+  caret-color: var(--text);
+}
+input:-webkit-autofill {
+  -webkit-text-fill-color: var(--text);
+  box-shadow: 0 0 0 1000px var(--surface-raised) inset;
+}
+.theme-sun {
+  display: none;
+}
+:root[data-theme="dark"] .theme-moon {
+  display: none;
+}
+:root[data-theme="dark"] .theme-sun {
+  display: block;
+}
+/* Disabled controls stay legible, with a separate tone from enabled actions. */
+:root[data-theme="dark"] button:disabled {
+  color: var(--disabled-text);
+  opacity: 1;
+}
+:root[data-theme="dark"] .primary-button:disabled {
+  background: var(--surface-track);
+  border-color: var(--control-border);
+  color: var(--muted);
+}
+:root[data-theme="dark"] .mode-button.selected:disabled {
+  color: var(--on-primary);
+  opacity: 0.7;
+}
+:root[data-theme="dark"] .process-select-cell input:disabled {
+  opacity: 0.65;
+}
+:root[data-theme="dark"] .brand-mark {
+  outline: 1px solid var(--border);
+}
+@media (max-width: 480px) {
+  /* Keep all four controls at their full touch size on small phones. */
+  .mobile-brand .brand > span:last-child {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-theme-switching] body,
+  :root[data-theme-switching] :is(.sidebar, .topbar, .card, dialog, .notice, .saved-network-menu) {
+    transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
+  }
+}

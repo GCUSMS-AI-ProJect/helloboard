@@ -1,0 +1,3 @@
+# HelloBoard verifies protected operations; it never opens a login session.
+@include common-auth
+@include common-account

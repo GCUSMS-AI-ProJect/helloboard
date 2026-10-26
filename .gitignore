@@ -1,0 +1,22 @@
+# 本机环境、缓存与凭证
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.env
+.env.*
+!.env.example
+/wifi.yaml
+/.wifi-*
+*.log
+*.pem
+*.key
+.DS_Store
+Thumbs.db
+
+# 浏览器检查生成物；README 截图保存在 docs/images/
+/docs/*.png
+/docs/*report.json
+/docs/platform-check.json
+/docs/brand-preview.svg

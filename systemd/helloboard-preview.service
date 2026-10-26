@@ -1,0 +1,13 @@
+[Unit]
+Description=HelloBoard read-only preview
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/helloboard
+ExecStart=%h/helloboard/.venv/bin/python %h/helloboard/wifi.py --preview --port 8090
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
