@@ -1,0 +1,10 @@
+# Python 3.13 / Linux x86_64; all transitive runtime dependencies pinned.
+blinker==1.9.0 --hash=sha256:2edd87b334c38cf31574facf2c7671fec7fa2a0f63a9d837b245a4411833ca5c
+click==8.5.0 --hash=sha256:00e283860f10b9d2775db0c20ede2bb2d669c3e33f47d173193d172d68dea0ee
+flask==3.1.3 --hash=sha256:3b2e0f556994ad85d88b0113152980f6eb8a711cadd4a7619254446e6eb99888
+itsdangerous==2.2.0 --hash=sha256:e7425c8d02b704ede8efa14c517e29b81cc42e47ac7eaf4a11fde48720b0ac20
+jinja2==3.1.6 --hash=sha256:fe8571fbbd1ff453eb75ea114f68611e5b3e5b8b018397eeb70573daa35d45ea
+markupsafe==3.0.4 --hash=sha256:434139499bb20b502ed3baa1f169e618f924a97e7a777fea1a49446d80106cf6
+pyyaml==6.0.3 --hash=sha256:0f29edc409a6392443abf94b9cf89ce99889a1dd5376d94316ae5145dfedd5d6
+waitress==3.0.2 --hash=sha256:09ad8fb3dbc7499ffbec9ab6ee8bb270df4d33fde0994e7c16d5106d2c1608a8
+werkzeug==3.1.9 --hash=sha256:9b06852940a71a19c735ea732380904e11ec8dcb63179bfe697dae0fadfa1c32

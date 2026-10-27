@@ -1,0 +1,2 @@
+#!/bin/sh
+exec /opt/helloboard/runtime/bin/python3 -E -s -B /opt/helloboard/wifi.py --config /etc/helloboard/wifi.yaml "$@"

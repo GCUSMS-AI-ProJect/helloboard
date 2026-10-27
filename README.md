@@ -1,4 +1,4 @@
-# HelloBoard
+<h1 align="center">HelloBoard</h1>
 
 HelloBoard 是面向 Raspberry Pi、Ubuntu / Debian 等 Linux 设备的轻量系统数据看板，整合系统监测、进程管理与 WiFi 配置，并提供 Windows 只读监测支持。
 
@@ -97,6 +97,12 @@ HelloBoard 是面向 Raspberry Pi、Ubuntu / Debian 等 Linux 设备的轻量系
 启动时识别平台及能力，缺少的硬件指标自动收起。Windows 已通过模拟环境验证，尚未完成真实 Windows 主机验证。
 
 ## 快速开始
+
+**Ubuntu x86_64 离线安装**：提供包含独立 Python、全部 Python 运行依赖和完整字体的 deb 包，目标电脑无需创建虚拟环境或下载 pip 包。安装后系统看板自动启动，不接管现有 WiFi；配置、启用 WiFi 与重新构建方法见 [deb 安装说明](docs/deb.md)。
+
+```bash
+sudo dpkg -i ./helloboard_0.1.0-1_amd64.deb
+```
 
 需要 **Python 3.10+**。以下命令以 Linux 为例，默认启动系统看板，不切换 WiFi：
 

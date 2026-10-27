@@ -1,0 +1,23 @@
+#!/bin/sh
+set -eu
+if [ "$1" = configure ]; then
+    chmod 700 /etc/helloboard
+    chmod 600 /etc/helloboard/wifi.yaml
+    if deb-systemd-helper debian-installed helloboard.service; then
+        deb-systemd-helper unmask helloboard.service >/dev/null || true
+        if deb-systemd-helper --quiet was-enabled helloboard.service; then
+            deb-systemd-helper enable helloboard.service >/dev/null || true
+        fi
+    else
+        deb-systemd-helper enable helloboard.service >/dev/null || true
+    fi
+    deb-systemd-helper update-state helloboard.service >/dev/null || true
+    if [ -d /run/systemd/system ]; then
+        systemctl --system daemon-reload || true
+        if [ -z "${2:-}" ]; then
+            deb-systemd-invoke start helloboard.service || true
+        else
+            deb-systemd-invoke try-restart helloboard.service || true
+        fi
+    fi
+fi

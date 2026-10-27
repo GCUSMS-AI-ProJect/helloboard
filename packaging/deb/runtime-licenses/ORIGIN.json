@@ -1,0 +1,7 @@
+{
+  "project": "astral-sh/python-build-standalone",
+  "release": "20261021",
+  "archive": "cpython-3.13.17+20261021-x86_64-unknown-linux-gnu-pgo+lto-full.tar.zst",
+  "sha256": "344eec7e761e7b3dccce0ce2d91a3e70d40f8ff5d3ce7d907d979c23e8451fc7",
+  "notice": "Upstream license texts from the matching full archive. Some components such as Tk are omitted from the HelloBoard runtime."
+}

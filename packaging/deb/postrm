@@ -1,0 +1,15 @@
+#!/bin/sh
+set -eu
+if [ "$1" = remove ]; then
+    deb-systemd-helper mask helloboard.service >/dev/null || true
+fi
+if [ "$1" = purge ]; then
+    deb-systemd-helper purge helloboard.service >/dev/null || true
+    deb-systemd-helper unmask helloboard.service >/dev/null || true
+    # The configuration store can create hidden temporary files after a crash.
+    # Leave unknown user files in place instead of recursively deleting them.
+    rmdir /etc/helloboard 2>/dev/null || true
+fi
+if [ -d /run/systemd/system ]; then
+    systemctl --system daemon-reload || true
+fi

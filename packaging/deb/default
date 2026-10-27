@@ -1,0 +1,3 @@
+# Default: system dashboard only; installation does not take over WiFi.
+# To enable WiFi management, install NetworkManager and remove --dashboard-only.
+HELLOBOARD_ARGS="--port 80 --dashboard-only"

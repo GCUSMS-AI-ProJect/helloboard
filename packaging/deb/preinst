@@ -1,0 +1,9 @@
+#!/bin/sh
+set -eu
+# Refuse to overwrite an installation managed by the source install script.
+if [ "$1" = install ]; then
+    if [ -e /opt/helloboard/wifi.py ] || [ -e /etc/systemd/system/helloboard.service ] || [ -e /opt/hellosms-wifi ]; then
+        echo 'Existing source installation found. Please migrate it before installing the deb package.' >&2
+        exit 1
+    fi
+fi

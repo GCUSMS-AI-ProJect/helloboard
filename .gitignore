@@ -20,3 +20,7 @@ Thumbs.db
 /docs/*report.json
 /docs/platform-check.json
 /docs/brand-preview.svg
+
+# 离线安装包与构建目录
+/dist/
+/build/
