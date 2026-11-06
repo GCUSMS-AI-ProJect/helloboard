@@ -50,14 +50,14 @@ with tempfile.TemporaryDirectory() as temp:
     controller = WifiController(store, radio)
     controller.phase = 'ready'
     authenticator = TestAuthenticator()
-    server = make_server('127.0.0.1', 8091, create_app(controller, authenticator=authenticator), threaded=True)
+    server = make_server('127.0.0.1', 0, create_app(controller, authenticator=authenticator), threaded=True)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch(executable_path='/usr/bin/chromium', headless=True, args=['--no-sandbox'])
             page = browser.new_page(viewport={'width':375,'height':900},reduced_motion='reduce')
             errors=[]; page.on('pageerror',lambda e:errors.append(str(e)))
-            page.goto('http://127.0.0.1:8091/wifi_config')
+            page.goto(f'http://127.0.0.1:{server.server_port}/wifi_config')
             expect(page.locator('#login-dialog')).to_have_count(0)
             expect(page.locator('#lock-button')).to_have_count(0)
             expect(page.locator('.network-row')).to_have_count(2)
@@ -152,8 +152,8 @@ with tempfile.TemporaryDirectory() as temp:
             assert authenticator.calls == ['incorrect','system-secret','system-secret']
             page.locator('#reveal-password').click()
             expect(page.locator('#ssid')).to_have_value('<script>alert(1)</script>')
-            expect(page.locator('#password')).to_have_value('')
-            expect(page.locator('#password')).to_have_attribute('placeholder', '留空使用已保存密码')
+            expect(page.locator('#password')).to_have_value('••••••••')
+            expect(page.locator('#password')).to_have_attribute('type', 'password')
             page.locator('#saved-network-toggle').click()
             expect(page.locator('#saved-network-menu [role="option"]')).to_have_text('<script>alert(1)</script>')
             page.keyboard.press('ArrowDown')

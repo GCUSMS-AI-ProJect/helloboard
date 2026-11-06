@@ -252,8 +252,8 @@ window.HelloBoardI18n = (() => {
     "连接 Wi-Fi 后，让手机或电脑也加入同一网络，再使用设备的新 IP 访问。可在路由器的设备列表中查找 IP。":
       "Join the same Wi-Fi on your phone or computer, then open the device’s new IP address. You can find it in your router’s device list.",
     "连接失败怎么办？": "What if a connection fails?",
-    "连接成功后，名称和密码自动保存在设备本地 YAML 中。下次打开会自动选中最近使用的网络，也可以从名称输入框右侧选择其他已保存的网络。密码框留空即可复用已保存密码。":
-      "After a successful connection, the device saves the network name and password locally. Your latest network is selected next time. Use the name field’s menu to pick another saved network, and leave its password blank to reuse it.",
+    "连接成功后，名称和密码自动保存在设备本地 YAML 中。已保存网络会自动填入密码圆点，不修改即可复用。点击眼睛并验证系统账号后可查看原密码。":
+      "After connecting, the device saves the network locally. Saved passwords are filled as dots and reused unless edited. Verify your system account using the eye button to view a saved password.",
     连接配置: "Connection",
     "连接页面显示的设备热点，再打开 http://":
       "Join the device hotspot, then open http://",

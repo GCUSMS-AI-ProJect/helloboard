@@ -316,6 +316,31 @@ class ApiTests(Base):
         self.assertTrue(self.client.get('/api/status').json['authorized'])
         self.assertEqual(self.client.get('/unknown-panel').status_code, 404)
 
+    def test_saved_network_secret_is_authorized_scoped_and_not_cached(self):
+        self.controller.config = self.candidate()
+        self.controller.config['networks'].append({'ssid': 'Other', 'password': 'other-example-secret'})
+        endpoint = '/api/saved-network-password'
+        denied = self.client.post(endpoint, json={'ssid': 'Other'}, headers=self.headers)
+        self.assertEqual(denied.status_code, 403)
+        self.assertTrue(denied.json['authorization_required'])
+        self.authorize()
+        reply = self.client.post(endpoint, json={'ssid': 'Other'}, headers=self.headers)
+        self.assertEqual(reply.json, {'ssid': 'Other', 'password': 'other-example-secret'})
+        self.assertEqual(reply.headers['Cache-Control'], 'no-store')
+        self.assertNotIn(b'other-example-secret', self.client.get('/api/status').data)
+        self.assertEqual(self.network.calls, [])
+        self.assertEqual(self.client.post(endpoint, json={'ssid': 'Other'}).status_code, 403)
+        self.app.config['SECRET_KEY'] = 'new-service-signing-key'
+        self.assertEqual(self.client.post(endpoint, json={'ssid': 'Other'}, headers=self.headers).status_code, 403)
+
+    def test_saved_network_secret_rejects_unknown_and_invalid_selection(self):
+        self.authorize()
+        for payload in [None, [], {}, {'ssid': []}, {'ssid': 'x' * 33}, {'ssid': 'not saved'}]:
+            reply = self.client.post('/api/saved-network-password', data=json.dumps(payload),
+                content_type='application/json', headers=self.headers)
+            self.assertEqual(reply.status_code, 400)
+        self.assertEqual(self.network.calls, [])
+
     def test_hotspot_secret_requires_authorization_and_is_never_cached(self):
         endpoint = '/api/ap-password/reveal'
         denied = self.client.post(endpoint, json={}, headers=self.headers)

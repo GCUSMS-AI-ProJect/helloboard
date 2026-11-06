@@ -77,6 +77,16 @@ class WifiController:
         finally:
             self.operation.release()
 
+    def saved_network_password(self, ssid):
+        """Resolve one saved credential only for an authorized reveal request."""
+        if not isinstance(ssid, str) or not ssid or len(ssid.encode('utf-8')) > 32:
+            raise ValueError('Wi-Fi 名称需为 1–32 字节。')
+        with self.state_lock:
+            saved = next((n for n in self.config['networks'] if n['ssid'] == ssid), None)
+            if saved is None:
+                raise ValueError('当前连接没有可读取的已保存密码。')
+            return {'ssid': ssid, 'password': saved['password']}
+
     def ap_password(self):
         """Read the saved hotspot secret only through the protected endpoint."""
         with self.state_lock:

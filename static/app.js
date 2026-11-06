@@ -17,6 +17,26 @@ let postingSwitch = false;
 let switching = false;
 let pending = null;
 let savedNetworks = [];
+// A masked saved credential is a reference, never a password sent to the radio.
+let savedPasswordSsid = null;
+let savedPasswordLoaded = false;
+let passwordRevision = 0;
+let loadingSavedPassword = false;
+const savedPasswordMask = "••••••••";
+function hideFormPassword() {
+  $("#password").type = "password";
+  $("#show-password").setAttribute("aria-pressed", "false");
+  $("#show-password").setAttribute("aria-label", t("显示密码"));
+}
+function fillSavedPassword() {
+  passwordRevision++;
+  savedPasswordLoaded = false;
+  hideFormPassword();
+  savedPasswordSsid = !$("#open-network").checked && savedNetwork()?.has_password
+    ? $("#ssid").value : null;
+  $("#password").value = savedPasswordSsid === null ? "" : savedPasswordMask;
+  $("#password").disabled = $("#open-network").checked;
+}
 let savingAp = false;
 let authorized = false;
 let authorizationRequest = null;
@@ -87,6 +107,8 @@ function clearApPassword() {
 function setAuthorized(value) {
   authorized = Boolean(value);
   if (!authorized) {
+    if (savedPasswordLoaded)
+      fillSavedPassword();
     clearConnectionPassword();
     clearApPassword();
   }
@@ -146,9 +168,8 @@ function savedMenu(open) {
 function chooseSaved(network) {
   selectedSsid = network.ssid;
   $("#ssid").value = network.ssid;
-  $("#password").value = "";
   $("#open-network").checked = !network.has_password;
-  $("#password").disabled = !network.has_password;
+  fillSavedPassword();
   passwordHint();
   savedMenu(false);
   renderNetworks();
@@ -388,7 +409,7 @@ async function refreshStatus() {
       $("#open-network").checked = Boolean(
         savedNetwork() && !savedNetwork().has_password,
       );
-      $("#password").disabled = $("#open-network").checked;
+      fillSavedPassword();
       renderSavedNetworks();
     }
     passwordHint();
@@ -413,7 +434,7 @@ async function refreshStatus() {
     ) {
       switching = false;
       notice(status.message);
-      $("#password").value = "";
+      fillSavedPassword();
     }
     controls();
   } catch (error) {
@@ -467,9 +488,8 @@ function renderNetworks() {
     button.addEventListener("click", () => {
       selectedSsid = network.ssid;
       $("#ssid").value = network.ssid;
-      $("#password").value = "";
       $("#open-network").checked = isOpen(network);
-      $("#password").disabled = $("#open-network").checked;
+      fillSavedPassword();
       passwordHint();
       savedMenu(false);
       setMode("lan");
@@ -514,20 +534,53 @@ async function runScan() {
 $("#mode-lan").addEventListener("click", () => setMode("lan"));
 $("#mode-ap").addEventListener("click", () => setMode("ap"));
 $("#scan-button").addEventListener("click", scan);
-$("#show-password").addEventListener("click", () => {
+$("#show-password").addEventListener("click", async () => {
+  if (loadingSavedPassword) return;
   const show = $("#password").type === "password";
+  const ssid = $("#ssid").value;
+  const revision = passwordRevision;
+  if (show && !$("#open-network").checked && savedNetwork()?.has_password &&
+      (savedPasswordSsid === ssid || !$("#password").value)) {
+    loadingSavedPassword = true;
+    $("#show-password").disabled = true;
+    try {
+      const result = await authorizedApi("saved-network-password", { ssid });
+      // Selecting a different SSID or editing during a request must win.
+      if (passwordRevision !== revision || $("#ssid").value !== ssid || !authorized)
+        return;
+      $("#password").value = result.password;
+      savedPasswordSsid = ssid;
+      savedPasswordLoaded = true;
+    } catch (error) {
+      if (!error.cancelled) toast(error.message);
+      return;
+    } finally {
+      loadingSavedPassword = false;
+      $("#show-password").disabled = false;
+    }
+  }
   $("#password").type = show ? "text" : "password";
   $("#show-password").setAttribute("aria-pressed", String(show));
-  $("#show-password").setAttribute(
-    "aria-label",
-    show ? t("隐藏密码") : t("显示密码"),
-  );
+  $("#show-password").setAttribute("aria-label", show ? t("隐藏密码") : t("显示密码"));
 });
-$("#open-network").addEventListener("change", () => {
-  $("#password").disabled = $("#open-network").checked;
+$("#password").addEventListener("beforeinput", () => {
+  if (savedPasswordSsid !== null && !savedPasswordLoaded) {
+    // Typing replaces the saved reference, rather than appending to its dots.
+    $("#password").value = "";
+    savedPasswordSsid = null;
+    passwordRevision++;
+  }
 });
+$("#password").addEventListener("input", () => {
+  savedPasswordSsid = null;
+  savedPasswordLoaded = false;
+  passwordRevision++;
+});
+$("#open-network").addEventListener("change", fillSavedPassword);
 $("#ssid").addEventListener("input", () => {
   selectedSsid = $("#ssid").value;
+  $("#open-network").checked = Boolean(savedNetwork() && !savedNetwork().has_password);
+  fillSavedPassword();
   passwordHint();
   renderSavedNetworks();
   renderNetworks();
@@ -543,7 +596,7 @@ $("#connect-form").addEventListener("submit", (event) => {
       return toast(t("Wi-Fi 名称需为 1–32 字节。"));
     let password = $("#password").value;
     if ($("#open-network").checked) password = "";
-    else if (!password && savedNetwork(ssid)?.has_password) password = null;
+    else if (savedPasswordSsid === ssid || (!password && savedNetwork(ssid)?.has_password)) password = null;
     else if (!password) return toast(t("请输入密码，或勾选开放网络。"));
     Object.assign(pending, { ssid, password });
   }

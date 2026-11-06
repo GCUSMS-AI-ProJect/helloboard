@@ -164,6 +164,14 @@ def create_app(controller, *, authenticator=None, metrics=None, processes=None, 
         require_authorized()
         return jsonify(controller.connection_password())
 
+    @app.post('/api/saved-network-password')
+    def saved_network_password():
+        require_authorized()
+        payload = request.get_json()
+        if not isinstance(payload, dict):
+            raise ValueError('配置格式不正确。')
+        return jsonify(controller.saved_network_password(payload.get('ssid')))
+
     @app.post('/api/scan')
     def scan():
         if not capabilities['wifi']['available']:
