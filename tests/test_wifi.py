@@ -446,6 +446,21 @@ class ApiTests(Base):
             self.assertEqual(self.client.post('/api/connect', json=payload, headers=self.headers).status_code, 202)
             change.assert_called_once_with(payload)
 
+    def test_local_discovery_host_and_origin(self):
+        for hostname in ('helloboard.local', 'HelloBoard.local:80', 'helloboard.local.', '[::1]:80'):
+            with self.subTest(hostname=hostname):
+                self.assertEqual(self.client.get('/api/status', headers={'Host': hostname}).status_code, 200)
+        for hostname in ('other.local', 'helloboard.local.evil.test', '8.8.8.8'):
+            self.assertEqual(self.client.get('/api/status', headers={'Host': hostname}).status_code, 403)
+        client = self.app.test_client()
+        client.get('/wifi_config', base_url='http://helloboard.local')
+        with client.session_transaction(base_url='http://helloboard.local') as session:
+            token = session['csrf']
+        headers = {'X-CSRF-Token': token, 'Origin': 'http://helloboard.local'}
+        self.assertEqual(client.post('/api/scan', json={}, base_url='http://helloboard.local', headers=headers).status_code, 200)
+        headers['Origin'] = 'http://other.local'
+        self.assertEqual(client.post('/api/scan', json={}, base_url='http://helloboard.local', headers=headers).status_code, 403)
+
     def test_sensitive_data_absent_and_invalid_payload_rejected(self):
         self.assertNotIn(b'fixture-ap-secret-2026', self.client.get('/api/status').data)
         for value in (None, [], {'mode': 'bad'}, {'mode': 'lan', 'ssid': 'home', 'password': 'short'}):

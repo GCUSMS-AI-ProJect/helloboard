@@ -6,6 +6,7 @@ import logging
 import math
 from pathlib import Path
 import secrets
+from urllib.parse import urlsplit
 
 from flask import Flask, jsonify, redirect, render_template, request, session, url_for
 from werkzeug.exceptions import HTTPException
@@ -58,15 +59,16 @@ def create_app(controller, *, authenticator=None, metrics=None, processes=None, 
 
     @app.before_request
     def protect():
-        # Only local/IP-host access: this interface is not intended for a public tunnel.
-        host = request.host.split(':')[0]
+        # Permit only private addresses and the explicit local discovery name.
+        # urlsplit also handles bracketed IPv6 addresses and optional ports.
+        host = (urlsplit(request.host_url).hostname or '').lower().rstrip('.')
         try:
             address = ip_address(host)
             valid_host = address.is_private or address.is_loopback
         except ValueError:
-            valid_host = host == 'localhost'
+            valid_host = host in ('localhost', 'helloboard.local')
         if not valid_host:
-            return jsonify(error='请通过设备的局域网或热点 IP 地址访问。'), 403
+            return jsonify(error='请通过 helloboard.local 或设备的局域网、热点 IP 地址访问。'), 403
         if request.path.startswith('/api/'):
             if request.method == 'POST':
                 if not request.is_json:

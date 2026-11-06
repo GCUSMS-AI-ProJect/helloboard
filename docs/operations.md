@@ -1,5 +1,25 @@
 # 部署与配置
 
+## 固定本地访问名称（Debian / Ubuntu）
+
+更新 HelloBoard 后，在源码目录执行一次：
+
+```bash
+sudo apt install avahi-daemon
+sudo python3 tools/enable_local_name.py
+```
+
+浏览器使用 **http://helloboard.local**（默认服务端口 80；其他端口需附加端口号）。
+Avahi 开机自启，在局域网和设备热点的活动接口上发布当前 IP，切换网络后无需重新写死 IP。
+脚本可重复执行，保留其他 Avahi 设置，不改变系统 hostname，不重启 WiFi。
+该名称在同一本地网络内有效，不依赖路由器分配固定 IP，也不是公网域名。
+热点模式下先连接设备热点；局域网模式下客户端加入同一网络。
+客户端和网络需支持 mDNS，访客隔离、组播过滤、VPN 或不同网段可能阻止发现。
+名称切换后可能短暂受客户端缓存影响；无法解析时仍可使用设备 IP（默认热点为 `192.168.11.17`）。
+多个设备使用同名时 Avahi 会自动添加后缀；可用 `journalctl -u avahi-daemon` 核对实际广播名。
+Windows/Linux/macOS 客户端的 `.local` 支持依系统配置而异，不能保证每台客户端都免配置可用。
+设备侧可用 `getent ahostsv4 helloboard.local` 检查解析；客户端需另行实测。
+
 ## Linux 运行方式
 
 需要 Python 3.10+；Debian / Ubuntu 可按需安装 `python3-venv`。首次启动前按 README 创建虚拟环境并安装依赖。
