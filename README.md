@@ -51,7 +51,7 @@ Then open **http://helloboard.local** from the same local network using an mDNS-
 
 A single server process shares background sampling across browsers. Static assets use compression and versioned caching; the UI reuses existing elements and stops polling in hidden tabs.
 
-Recorded Linux benchmarks showed approximately **36.5 MiB RSS at startup**, **39.6 MiB after load**, and **52% less initial static-asset transfer** after optimization. Results vary by device and workload; see the [benchmark methodology](docs/performance.md) (Chinese).
+Benchmarks documented in commit [`1b44031`](https://github.com/GCUSMS-AI-ProJect/helloboard/commit/1b44031) on October 26, 2026 recorded **36.5 MiB RSS at startup**, **39.6 MiB after load**, and **52% less initial static-asset transfer** after optimization. These are historical measurements, not a guarantee for the current version. See the [English benchmark summary](docs/benchmarks.md) for conditions and limitations.
 
 ## Platform support
 
@@ -61,9 +61,19 @@ Designed for trusted local networks. Sensitive actions require system-account ve
 
 ## Documentation
 
+- [Installation, updates, and troubleshooting](docs/getting-started.md)
+- [Benchmark summary](docs/benchmarks.md)
 - [UI design prompt](PROMPT.md) (Chinese)
 - [Project guide and installation](docs/project-guide.md) (Chinese)
 - [Deployment and local discovery](docs/operations.md) (Chinese)
 - [Performance measurements](docs/performance.md) (Chinese)
 - [Offline Ubuntu amd64 package](docs/deb.md) (Chinese)
 - [Font sources and licenses](static/fonts/SOURCES.md)
+
+## Feedback
+
+Report bugs or request features through [GitHub Issues](https://github.com/GCUSMS-AI-ProJect/helloboard/issues). Include your OS, architecture, Python version, commit, and steps to reproduce. Remove passwords and other private data from logs and screenshots.
+
+## License
+
+No project-level license has been selected yet. This repository does not currently grant an open-source license for HelloBoard's own code. Third-party components retain their respective licenses: see [fonts](static/fonts/SOURCES.md), [Lucide icons](static/lucide-LICENSE.txt), and [bundled runtime notices](packaging/deb/runtime-licenses).
