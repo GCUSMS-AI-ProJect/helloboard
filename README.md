@@ -77,3 +77,24 @@ Report bugs or request features through [GitHub Issues](https://github.com/GCUSM
 ## License
 
 No project-level license has been selected yet. This repository does not currently grant an open-source license for HelloBoard's own code. Third-party components retain their respective licenses: see [fonts](static/fonts/SOURCES.md), [Lucide icons](static/lucide-LICENSE.txt), and [bundled runtime notices](packaging/deb/runtime-licenses).
+
+## Docker
+
+Build with `docker build -t helloboard .`. Start the dashboard with
+`docker run --rm -p 127.0.0.1:8090:8090 helloboard`.
+
+To display the Linux host's Wi-Fi connection and cached scan results, run
+`python3 tools/export_wifi_snapshot.py ./wifi-cache --interface wlan0` on the host
+every 15 seconds. Start the container with the directory mounted read-only:
+
+```sh
+docker run --rm -p 127.0.0.1:8090:8090 \
+  -v "$PWD/wifi-cache:/run/helloboard-wifi:ro" \
+  helloboard --wifi-snapshot /run/helloboard-wifi/latest.json --interface wlan0
+```
+
+Replace wlan0 with the host adapter name in both commands. Snapshots expire after
+90 seconds. Network changes and process control are disabled in snapshot mode.
+For optional panel login, mount a private Werkzeug password hash file at
+`/home/helloboard/.helloboard-password-hash` readable by the container user.
+Host installations continue to use the native installer and PAM.

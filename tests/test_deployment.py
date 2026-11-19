@@ -25,7 +25,7 @@ class DeploymentTests(unittest.TestCase):
         self.source = self.root / 'source'
         self.source.mkdir()
         for name in ['wifi.py', 'web_assets.py','authentication.py','pam_auth.py','configuration.py','controller.py',
-                     'network.py','system_metrics.py','portable_metrics.py','host_platform.py','process_control.py','requirements.txt','README.md','install.sh','update.sh']:
+                     'network.py','system_metrics.py','portable_metrics.py','host_platform.py','pi_dashboard.py','process_control.py','requirements.txt','README.md','install.sh','update.sh']:
             shutil.copy2(ROOT / name, self.source / name)
         for name in ['static','templates','systemd','tools']:
             shutil.copytree(ROOT / name, self.source / name, ignore=shutil.ignore_patterns('__pycache__'))

@@ -226,22 +226,31 @@ def main():
     parser.add_argument('--preview', action='store_true', help='Read-only preview: never changes network settings')
     parser.add_argument('--auth-user', help='System login account used to authorize protected actions')
     parser.add_argument('--dashboard-only', action='store_true', help='Only run the system dashboard; never manage WiFi')
+    parser.add_argument('--wifi-snapshot', type=Path, help='Read a host-exported WiFi snapshot in Docker')
     args = parser.parse_args()
+    if args.wifi_snapshot and args.dashboard_only:
+        parser.error('choose either --wifi-snapshot or --dashboard-only')
     if not 1 <= args.port <= 65535:
         parser.error('--port must be between 1 and 65535')
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
     host = identity()
-    wifi_caps = detect_wifi(host, args.interface, dashboard_only=args.dashboard_only)
-    if wifi_caps['available']:
-        store = ConfigStore(args.config)
-        controller = WifiController(store, NetworkManager(wifi_caps['interface']),
-            preview=args.preview or not wifi_caps['manage'], capabilities=wifi_caps)
+    if args.wifi_snapshot:
+        from pi_dashboard import DashboardAuthenticator, PiWifi
+        controller = PiWifi(args.wifi_snapshot, args.interface or 'wlan0')
+        wifi_caps = controller.capabilities
+        auth = DashboardAuthenticator(args.auth_user) if (Path.home() / '.helloboard-password-hash').is_file() else make_authenticator(host, args.auth_user)
     else:
-        controller = DashboardController(wifi_caps)
+        wifi_caps = detect_wifi(host, args.interface, dashboard_only=args.dashboard_only)
+        if wifi_caps['available']:
+            store = ConfigStore(args.config)
+            controller = WifiController(store, NetworkManager(wifi_caps['interface']),
+                preview=args.preview or not wifi_caps['manage'], capabilities=wifi_caps)
+        else:
+            controller = DashboardController(wifi_caps)
+        auth = make_authenticator(host, args.auth_user)
     metrics = make_metrics(host)
-    auth = make_authenticator(host, args.auth_user)
     processes = ProcessManager(metrics, preview=args.preview,
-        allow_control=host['family'] == 'Linux' and auth.available)
+        allow_control=not args.wifi_snapshot and host['family'] == 'Linux' and auth.available)
     app = create_app(controller, authenticator=auth, metrics=metrics, processes=processes, host=host)
     # Waitress must bind successfully before any network mutation starts.
     from waitress.server import create_server

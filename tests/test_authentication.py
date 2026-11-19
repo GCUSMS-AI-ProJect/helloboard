@@ -1,5 +1,6 @@
 """Authentication rejects missing credentials and verifies every AP update anew."""
 import ctypes as C
+import getpass
 import unittest
 from unittest.mock import Mock, patch
 
@@ -9,7 +10,7 @@ from pam_auth import Message, Response, PamConversation, authenticate
 
 class AuthenticationTests(unittest.TestCase):
     def test_success_is_not_cached_and_null_passwords_are_rejected(self):
-        auth = SystemAuthenticator('ubuntu')
+        auth = SystemAuthenticator(getpass.getuser())
         with patch('pam_auth.authenticate', side_effect=[True, False]) as verify:
             auth.verify('correct-password')
             with self.assertRaises(PermissionError): auth.verify('wrong-password')
@@ -18,7 +19,7 @@ class AuthenticationTests(unittest.TestCase):
             with self.assertRaises(PermissionError): auth.verify(invalid)
 
     def test_failed_attempts_are_serialized_and_throttled(self):
-        auth = SystemAuthenticator('ubuntu')
+        auth = SystemAuthenticator(getpass.getuser())
         with patch('pam_auth.authenticate', return_value=False) as verify:
             with self.assertRaises(PermissionError): auth.verify('wrong-password')
             with self.assertRaises(PermissionError): auth.verify('wrong-password')
@@ -28,7 +29,7 @@ class AuthenticationTests(unittest.TestCase):
 
     def test_unavailable_pam_fails_closed(self):
         with patch('pam_auth.authenticate', side_effect=OSError('missing library')):
-            with self.assertRaises(PermissionError): SystemAuthenticator('ubuntu').verify('password')
+            with self.assertRaises(PermissionError): SystemAuthenticator(getpass.getuser()).verify('password')
 
     def test_pam_conversation_and_account_checks_use_fresh_handles(self):
         """Use real C response allocation with a fake PAM ABI; no real login attempt."""

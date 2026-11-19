@@ -27,6 +27,10 @@ class SystemAuthenticator:
         self.lock = threading.Lock()
         self.retry_after = 0
 
+    def check_password(self, password):
+        from pam_auth import authenticate
+        return authenticate(self.username, password)
+
     def verify(self, password):
         if not isinstance(password, str) or not password or len(password) > 512 or '\x00' in password:
             raise PermissionError('请输入系统登录密码。')
@@ -36,10 +40,9 @@ class SystemAuthenticator:
             if time.monotonic() < self.retry_after:
                 raise PermissionError('请稍后重试系统密码验证。')
             try:
-                from pam_auth import authenticate
                 # PAM checks both the password and account expiry/lock policy.
                 # A fresh PAM handle is used every time; credentials are not reset.
-                valid = authenticate(self.username, password)
+                valid = self.check_password(password)
             except (ImportError, OSError):
                 raise PermissionError('系统密码验证不可用，请检查 PAM 配置。') from None
             if not valid:
