@@ -115,7 +115,7 @@ def create_app(controller, *, authenticator=None, metrics=None, processes=None, 
 
     def proxy_call(payload):
         with socket.socket(socket.AF_UNIX) as client:
-            client.settimeout(5)
+            client.settimeout(8)
             client.connect(proxy_socket)
             client.sendall(json.dumps(payload).encode() + b'\n')
             with client.makefile('rb') as stream:
@@ -132,6 +132,7 @@ def create_app(controller, *, authenticator=None, metrics=None, processes=None, 
         return render_template('proxy.html', csrf=session['csrf'], login_user=authenticator.username,
                                settings=proxy_call({'action': 'status'}))
 
+    @app.post('/api/bash-proxy/test')
     @app.post('/api/bash-proxy')
     def save_bash_proxy():
         if not proxy_socket:
@@ -140,8 +141,14 @@ def create_app(controller, *, authenticator=None, metrics=None, processes=None, 
         data = request.get_json()
         if not isinstance(data, dict):
             raise ValueError('配置格式不正确。')
-        return jsonify(proxy_call(dict(action='save', host=data.get('host'), port=data.get('port'),
-                                       enabled=data.get('enabled'))))
+        settings = dict(host=data.get('host'), port=data.get('port'), enabled=data.get('enabled'))
+        if request.path.endswith('/test'):
+            proxy_call(dict(action='test', **settings))
+            session['proxy_test'] = settings
+            return jsonify(ok=True)
+        if settings['enabled'] and session.pop('proxy_test', None) != settings:
+            proxy_call(dict(action='test', **settings))
+        return jsonify(proxy_call(dict(action='save', **settings)))
 
     @app.get('/api/processes')
     def process_list():

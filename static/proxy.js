@@ -21,23 +21,43 @@ for (const button of mode.querySelectorAll("button")) {
     feedback(t("点击保存设置以应用"));
   };
 }
-async function post(path, body) {
+async function post(path, body, signal) {
   const response = await fetch("/api/" + path, {
-    method: "POST", headers: {"Content-Type": "application/json", "X-CSRF-Token": csrf},
+    method: "POST", signal, headers: {"Content-Type": "application/json", "X-CSRF-Token": csrf},
     body: JSON.stringify(body)
   });
   const data = await response.json();
   if (!response.ok) throw Object.assign(new Error(data.error), {login: data.authorization_required});
   return data;
 }
+let testRequest;
+function cancelTest() {
+  testRequest?.abort();
+  if (el("proxy-test").open) el("proxy-test").close();
+}
+el("cancel-test").onclick = cancelTest;
+el("proxy-test").addEventListener("cancel", cancelTest);
 async function save() {
   const submit = el("proxy-form").querySelector("button[type=submit]");
   if (submit.disabled) return;
   submit.disabled = true;
   try {
-    await post("bash-proxy", {enabled: mode.dataset.mode === "on", host: el("host").value.trim(), port: el("port").valueAsNumber});
-    feedback(t("已保存"));
+    const settings = {enabled: mode.dataset.mode === "on", host: el("host").value.trim(), port: el("port").valueAsNumber};
+    if (settings.enabled) {
+      testRequest = new AbortController();
+      el("proxy-test").showModal();
+      try {
+        await post("bash-proxy/test", settings, testRequest.signal);
+        testRequest.signal.throwIfAborted();
+      } finally {
+        if (el("proxy-test").open) el("proxy-test").close();
+        testRequest = null;
+      }
+    }
+    await post("bash-proxy", settings);
+    feedback(settings.enabled ? t("Successful · 联网成功，已保存") : t("代理已关闭"));
   } catch (error) {
+    if (error.name === "AbortError") { feedback(t("已取消")); return; }
     if (error.login) { el("auth-error").textContent = ""; el("login").showModal(); el("password").focus(); }
     else feedback(error.message);
   } finally { submit.disabled = false; }

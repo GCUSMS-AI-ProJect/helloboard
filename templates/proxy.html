@@ -27,6 +27,11 @@
       </section>
     </main></div>
     <div id="result" class="toast" role="status" aria-live="polite"></div>
+    <dialog id="proxy-test" aria-labelledby="test-title" aria-describedby="test-target">
+      <h2 id="test-title" data-i18n="正在测试代理连接">正在测试代理连接</h2>
+      <p id="test-target" class="muted">http://ipinfo.io</p>
+      <div class="dialog-actions"><button id="cancel-test" type="button" class="secondary-button" data-i18n="取消">取消</button></div>
+    </dialog>
     <dialog id="login"><form id="auth-form">
       <h2 data-i18n="验证登录">验证登录</h2>
       <label for="username" data-i18n="系统用户名">系统用户名</label><input id="username" value="{{ login_user }}" autocomplete="username" required>

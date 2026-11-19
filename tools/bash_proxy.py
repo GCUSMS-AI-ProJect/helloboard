@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import re
+import subprocess
 import sys
 import tempfile
 
@@ -31,16 +32,24 @@ def handle(home, data):
                     enabled=any(line.strip() in LEGACY for line in startup.splitlines()) and
                     bool(old) and "# disabled" not in old)
     host, port, enabled = data.get("host"), data.get("port"), data.get("enabled")
-    if (data.get("action") != "save" or type(enabled) is not bool or
+    if (data.get("action") not in ("save", "test") or type(enabled) is not bool or
         not isinstance(host, str) or len(host) > 253 or
         not all(re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?", part) for part in host.split(".")) or
         type(port) is not int or not 1 <= port <= 65535):
         raise ValueError("请输入有效的主机名、IPv4 地址和端口。")
+    if data["action"] == "test":
+        result = subprocess.run(["curl", "--disable", "--noproxy", "", "--silent", "--fail",
+                                 "--location", "--connect-timeout", "3", "--max-time", "5",
+                                 "--proxy", f"http://{host}:{port}", "http://ipinfo.io"],
+                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if result.returncode:
+            raise ValueError("Error · 代理联网测试失败，请检查地址和端口。")
+        return {"ok": True}
     script_text = f'#!/bin/bash\n{MARK}\nPROXY_HOST="{host}"\nPROXY_PORT="{port}"\n'
     clear = "unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY"
     if enabled:
         script_text += ('if curl --disable --noproxy "" --silent --fail --proxy "http://${PROXY_HOST}:${PROXY_PORT}" '
-                        '--connect-timeout 3 --max-time 5 https://ipinfo.io/ip >/dev/null 2>&1; then\n'
+                        '--connect-timeout 3 --max-time 5 --location http://ipinfo.io >/dev/null 2>&1; then\n'
                         '    export http_proxy="http://${PROXY_HOST}:${PROXY_PORT}"\n'
                         '    export https_proxy="$http_proxy" HTTPS_PROXY="$http_proxy"\n'
                         '    unset HTTP_PROXY\nelse\n    ' + clear + '\nfi\n')
@@ -60,9 +69,13 @@ def handle(home, data):
 if __name__ == "__main__":
     try:
         home = Path.home()
-        with (home / ".helloboard-proxy.lock").open("a") as lock:
-            fcntl.flock(lock, fcntl.LOCK_EX)
-            reply = handle(home, json.loads(sys.stdin.buffer.readline(4097)))
+        data = json.loads(sys.stdin.buffer.readline(4097))
+        if data.get("action") == "test":
+            reply = handle(home, data)
+        else:
+            with (home / ".helloboard-proxy.lock").open("a") as lock:
+                fcntl.flock(lock, fcntl.LOCK_EX)
+                reply = handle(home, data)
     except (ValueError, OSError) as error:
         reply = dict(error=str(error))
     print(json.dumps(reply))
