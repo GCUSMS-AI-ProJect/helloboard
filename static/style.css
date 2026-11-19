@@ -459,7 +459,8 @@ h2 {
   pointer-events: none;
   transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.mode-switch[data-mode="ap"]::before {
+.mode-switch[data-mode="ap"]::before,
+.mode-switch[data-mode="off"]::before {
   transform: translateX(100%);
 }
 .mode-button {
@@ -1505,6 +1506,9 @@ body.panel-open {
 .proxy-card form { display: grid; gap: 1rem; }
 .proxy-fields { display: grid; grid-template-columns: minmax(0, 2fr) minmax(5rem, 1fr); gap: 1rem; }
 .proxy-fields input { width: 100%; margin-top: .4rem; }
-.proxy-toggle { display: flex; align-items: center; gap: .6rem; }
-.proxy-toggle input { width: 1.1rem; height: 1.1rem; }
 .proxy-card .primary-button { justify-self: start; }
+
+.proxy-card { box-shadow: 0 2px 5px var(--shadow-small), 0 12px 30px var(--shadow-menu); }
+.proxy-card code { font: inherit; }
+.proxy-card .mode-switch { margin: 0; max-width: 24rem; }
+.proxy-card button:active:not(:disabled) { transform: scale(.97); }

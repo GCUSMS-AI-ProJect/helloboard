@@ -8,17 +8,25 @@
       <section class="card proxy-card">
         <h2 data-i18n="终端代理">终端代理</h2>
         <form id="proxy-form">
-          <label class="proxy-toggle"><input type="checkbox" role="switch" id="enabled" {% if settings.enabled %}checked{% endif %}> <span data-i18n="启用代理">启用代理</span></label>
+          <div id="proxy-mode" class="mode-switch" role="group" aria-label="终端代理" data-mode="{{ 'on' if settings.enabled else 'off' }}">
+            {% for value, label, icon in [('on','启用代理','i-language'),('off','关闭代理','i-stop')] %}
+            {% set selected = (value == 'on') == settings.enabled %}
+            <button type="button" class="mode-button{% if selected %} selected{% endif %}" data-value="{{ value }}" aria-pressed="{{ 'true' if selected else 'false' }}">
+              <svg aria-hidden="true"><use href="#{{ icon }}" /></svg><span data-i18n="{{ label }}">{{ label }}</span>
+            </button>
+            {% endfor %}
+          </div>
           <div class="proxy-fields">
             <label><span data-i18n="代理主机">代理主机</span><input id="host" required maxlength="253" value="{{ settings.host }}"></label>
             <label><span data-i18n="端口">端口</span><input id="port" type="number" required min="1" max="65535" value="{{ settings.port }}"></label>
           </div>
           <p class="muted">保存后在新终端生效。当前终端可运行 <code>source ~/.bashrc</code>。</p>
           <button class="primary-button" type="submit" data-i18n="保存设置">保存设置</button>
-          <span id="result" role="status"></span>
+          
         </form>
       </section>
     </main></div>
+    <div id="result" class="toast" role="status" aria-live="polite"></div>
     <dialog id="login"><form id="auth-form">
       <h2 data-i18n="验证登录">验证登录</h2>
       <label for="username" data-i18n="系统用户名">系统用户名</label><input id="username" value="{{ login_user }}" autocomplete="username" required>

@@ -11,6 +11,7 @@ window.HelloBoardI18n = (() => {
     // Keep the page usable when browser storage is unavailable.
   }
   const english = {
+    "关闭代理": "Disable proxy", "点击保存设置以应用": "Save settings to apply",
     "代理": "Proxy", "终端代理": "Terminal proxy", "启用代理": "Enable proxy", "代理主机": "Proxy host", "端口": "Port", "保存设置": "Save settings",
     "深色模式": "Dark mode",
     "切换为深色模式": "Switch to dark mode",
