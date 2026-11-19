@@ -308,9 +308,13 @@ def main():
         else:
             controller = DashboardController(wifi_caps)
         auth = make_authenticator(host, args.auth_user)
+        if args.dashboard_only and os.environ.get('HELLOBOARD_PROXY_SOCKET'):
+            from pi_dashboard import DashboardAuthenticator
+            auth = DashboardAuthenticator(args.auth_user)
     metrics = make_metrics(host)
     processes = ProcessManager(metrics, preview=args.preview,
-        allow_control=not args.wifi_snapshot and host['family'] == 'Linux' and auth.available)
+        allow_control=not args.wifi_snapshot and host['family'] == 'Linux' and auth.available
+        and not (args.dashboard_only and os.environ.get('HELLOBOARD_PROXY_SOCKET')))
     app = create_app(controller, authenticator=auth, metrics=metrics, processes=processes, host=host)
     # Waitress must bind successfully before any network mutation starts.
     from waitress.server import create_server
