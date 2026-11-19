@@ -115,6 +115,9 @@ class WifiController:
                         n for n in candidate.get('networks', [])
                         if n['ssid'] != candidate['lan']['ssid']]][:100]
                 self.store.save(candidate)
+                if getattr(self, "selection_marker", None):
+                    self.selection_marker.touch(mode=0o600)
+                    self.adopt_current = False
                 with self.state_lock:
                     self.config = candidate
             self.update('ready', 'Wi-Fi 已连接。' if mode == 'lan' else '热点已开启。', fallback=False)
@@ -188,13 +191,15 @@ class WifiController:
 
     def _monitor(self):
         with self.operation:
-            if self.config['mode'] == 'ap' and not self.capabilities['ap']:
+            if getattr(self, "adopt_current", False):
+                self.update("ready", "正在使用当前无线连接。")
+            elif self.config['mode'] == 'ap' and not self.capabilities['ap']:
                 self.update('error', '这块无线网卡不支持 AP 热点模式。')
             else:
                 self.apply(deepcopy(self.config), persist=False)
         failures = 0
         while not self.stop_event.wait(10):
-            if not self.operation.acquire(blocking=False):
+            if getattr(self, "adopt_current", False) or not self.operation.acquire(blocking=False):
                 continue
             try:
                 try:

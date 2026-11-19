@@ -1,0 +1,7 @@
+[Socket]
+ListenStream=/var/lib/helloboard-control/network.sock
+SocketMode=0600
+SocketUser=100999
+Accept=yes
+[Install]
+WantedBy=sockets.target

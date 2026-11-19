@@ -651,7 +651,8 @@ $("#confirm-switch").addEventListener("click", async () => {
     $("#confirm-switch").textContent = t("正在切换…");
     $("#confirm-close").disabled = true;
     $("#cancel-switch").disabled = true;
-    await api("connect", request);
+    if (status.capabilities?.bridge) await authorizedApi("connect", request);
+    else await api("connect", request);
     switching = true;
     await closeDialog($("#confirm-dialog"));
     notice(

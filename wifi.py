@@ -190,6 +190,8 @@ def create_app(controller, *, authenticator=None, metrics=None, processes=None, 
         payload = request.get_json()
         if not isinstance(payload, dict):
             raise ValueError('配置格式不正确。')
+        if capabilities["wifi"].get("bridge"):
+            require_authorized()
         controller.request(payload)
         return jsonify(ok=True, message='已开始切换，请稍候。'), 202
 
@@ -227,14 +229,29 @@ def main():
     parser.add_argument('--auth-user', help='System login account used to authorize protected actions')
     parser.add_argument('--dashboard-only', action='store_true', help='Only run the system dashboard; never manage WiFi')
     parser.add_argument('--wifi-snapshot', type=Path, help='Read a host-exported WiFi snapshot in Docker')
+    parser.add_argument('--wifi-control-socket', type=Path, help='Delegate Wi-Fi operations to the host adapter')
     args = parser.parse_args()
+    if args.wifi_control_socket and (args.wifi_snapshot or args.dashboard_only):
+        parser.error('select one Wi-Fi backend')
     if args.wifi_snapshot and args.dashboard_only:
         parser.error('choose either --wifi-snapshot or --dashboard-only')
     if not 1 <= args.port <= 65535:
         parser.error('--port must be between 1 and 65535')
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
     host = identity()
-    if args.wifi_snapshot:
+    if args.wifi_control_socket:
+        from pi_dashboard import DashboardAuthenticator
+        from network_bridge import HostNetwork
+        interface = args.interface or 'wlan0'
+        net = HostNetwork(args.wifi_control_socket, interface)
+        net.snapshot()
+        wifi_caps = dict(available=True, manage=not args.preview, ap=True, bridge=True, interface=interface, reason='')
+        auth = DashboardAuthenticator(args.auth_user)
+        has_selection = args.config.with_suffix('.selected').exists()
+        controller = WifiController(ConfigStore(args.config), net, preview=args.preview, capabilities=wifi_caps)
+        controller.selection_marker = args.config.with_suffix('.selected')
+        controller.adopt_current = not has_selection
+    elif args.wifi_snapshot:
         from pi_dashboard import DashboardAuthenticator, PiWifi
         controller = PiWifi(args.wifi_snapshot, args.interface or 'wlan0')
         wifi_caps = controller.capabilities

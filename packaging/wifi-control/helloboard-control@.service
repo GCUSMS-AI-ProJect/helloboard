@@ -1,0 +1,10 @@
+[Service]
+ExecStart=/usr/bin/python3 -E -s /usr/local/lib/helloboard-control/worker.py wlan0
+StandardInput=socket
+StandardOutput=socket
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+RestrictAddressFamilies=AF_UNIX
+RuntimeMaxSec=90
