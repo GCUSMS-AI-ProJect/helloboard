@@ -3,6 +3,9 @@
 import argparse
 from ipaddress import ip_address
 import logging
+import json
+import os
+import socket
 import math
 from pathlib import Path
 import secrets
@@ -106,6 +109,39 @@ def create_app(controller, *, authenticator=None, metrics=None, processes=None, 
     def index():
         session.setdefault('csrf', secrets.token_urlsafe(32))
         return render_template('system_status.html', csrf=session['csrf'], login_user=authenticator.username)
+
+    proxy_socket = os.environ.get('HELLOBOARD_PROXY_SOCKET')
+    capabilities['bash_proxy'] = bool(proxy_socket)
+
+    def proxy_call(payload):
+        with socket.socket(socket.AF_UNIX) as client:
+            client.settimeout(5)
+            client.connect(proxy_socket)
+            client.sendall(json.dumps(payload).encode() + b'\n')
+            with client.makefile('rb') as stream:
+                reply = json.loads(stream.readline(4097))
+        if 'error' in reply:
+            raise ValueError(reply['error'])
+        return reply
+
+    @app.get('/proxy')
+    def proxy_settings():
+        if not proxy_socket:
+            return redirect(url_for('index'))
+        session.setdefault('csrf', secrets.token_urlsafe(32))
+        return render_template('proxy.html', csrf=session['csrf'], login_user=authenticator.username,
+                               settings=proxy_call({'action': 'status'}))
+
+    @app.post('/api/bash-proxy')
+    def save_bash_proxy():
+        if not proxy_socket:
+            raise PermissionError('未配置宿主机代理服务。')
+        require_authorized()
+        data = request.get_json()
+        if not isinstance(data, dict):
+            raise ValueError('配置格式不正确。')
+        return jsonify(proxy_call(dict(action='save', host=data.get('host'), port=data.get('port'),
+                                       enabled=data.get('enabled'))))
 
     @app.get('/api/processes')
     def process_list():

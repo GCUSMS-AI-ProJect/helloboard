@@ -119,6 +119,7 @@
         {% if capabilities.wifi.available %}<a href="{{ url_for('wifi_config') }}" class="nav-item{% if page_name == 'WiFi 管理' %} active{% endif %}" {% if page_name == 'WiFi 管理' %}aria-current="page"{% endif %} aria-label="WiFi 管理" data-i18n-aria-label="WiFi 管理">
           <svg aria-hidden="true"><use href="#i-wifi" /></svg><span class="nav-label" data-i18n="WiFi 管理">WiFi 管理</span><span class="nav-tooltip" aria-hidden="true" data-i18n="WiFi 管理">WiFi 管理</span>
         </a>{% endif %}
+        {% if capabilities.bash_proxy %}<a href="/proxy" class="nav-item{% if page_name == '代理' %} active{% endif %}" aria-label="代理"><svg aria-hidden="true"><use href="#i-language" /></svg><span class="nav-label" data-i18n="代理">代理</span><span class="nav-tooltip" aria-hidden="true" data-i18n="代理">代理</span></a>{% endif %}
       </nav>
     </aside>
     <div class="app-frame">
@@ -202,4 +203,5 @@
       </header>
       <nav class="mobile-pages" aria-label="页面导航" data-i18n-aria-label="页面导航">
 {% for name, endpoint, icon in [('系统状态','index','i-board'),('WiFi 管理','wifi_config','i-wifi')] %}{% if endpoint != 'wifi_config' or capabilities.wifi.available %}<a href="{{ url_for(endpoint) }}" {% if page_name == name %}aria-current="page"{% endif %} aria-label="{{ name }}" data-i18n-aria-label="{{ name }}"><svg aria-hidden="true"><use href="#{{ icon }}" /></svg>{% set short_name = {'系统状态':'系统', 'WiFi 管理':'WiFi'}[name] %}<span data-i18n="{{ short_name }}">{{ short_name }}</span></a>{% endif %}{% endfor %}
+        {% if capabilities.bash_proxy %}<a href="/proxy" {% if page_name == '代理' %}aria-current="page"{% endif %}><svg aria-hidden="true"><use href="#i-language" /></svg><span data-i18n="代理">代理</span></a>{% endif %}
       </nav>
