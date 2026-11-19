@@ -69,7 +69,7 @@ function renderPasswordControl() {
   if (revealedSsid !== null && revealedOpenNetwork)
     $("#connection-secret").textContent = t("无密码");
   $("#connection-password-area").hidden =
-    !status?.connected || status.mode !== "lan";
+    !status?.connected || status.mode !== "lan" || status.capabilities?.snapshot;
   $("#reveal-password").setAttribute(
     "aria-pressed",
     String(revealedSsid !== null),
@@ -420,7 +420,7 @@ async function refreshStatus() {
     )
       renderNetworks();
     if (
-      status.preview ||
+      (status.preview && (!status.capabilities?.snapshot || status.phase === "unavailable")) ||
       status.fallback ||
       status.phase === "error" ||
       status.busy
@@ -451,12 +451,15 @@ function renderNetworks() {
       status.ssid === network.ssid,
     );
     const item = document.createElement("li");
-    const button = document.createElement("button");
-    button.type = "button";
+    const snapshot = status?.capabilities?.snapshot;
+    const button = document.createElement(snapshot ? "div" : "button");
     button.className = "network-row";
     button.classList.toggle("chosen", network.ssid === selectedSsid);
-    button.setAttribute("aria-pressed", String(network.ssid === selectedSsid));
-    button.disabled = !network.supported;
+    if (!snapshot) {
+      button.type = "button";
+      button.setAttribute("aria-pressed", String(network.ssid === selectedSsid));
+      button.disabled = !network.supported;
+    }
     const symbol = document.createElement("span");
     symbol.className = "network-icon";
     symbol.append(signalIcon(network.signal));
@@ -465,7 +468,7 @@ function renderNetworks() {
     const title = document.createElement("strong");
     title.textContent = network.ssid;
     const detail = document.createElement("span");
-    detail.textContent = !network.supported
+    detail.textContent = !snapshot && !network.supported
       ? t("暂不支持此网络的认证方式")
       : network.active
         ? t("已连接")
@@ -485,7 +488,7 @@ function renderNetworks() {
             : "lock",
       ),
     );
-    button.addEventListener("click", () => {
+    if (!snapshot) button.addEventListener("click", () => {
       selectedSsid = network.ssid;
       $("#ssid").value = network.ssid;
       $("#open-network").checked = isOpen(network);

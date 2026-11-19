@@ -16,7 +16,7 @@ class DashboardAuthenticator(SystemAuthenticator):
 
 class PiWifi(DashboardController):
     def __init__(self, path, interface):
-        super().__init__(dict(available=True, manage=False, ap=False, interface=interface,
+        super().__init__(dict(snapshot=True, available=True, manage=False, ap=False, interface=interface,
                               reason="宿主机 Wi-Fi 只读。"))
         self.path = path
 
@@ -38,7 +38,7 @@ class PiWifi(DashboardController):
                 continue
             active, ssid, signal, security = fields
             item = dict(active=active == "*", ssid=ssid, signal=int(signal or 0),
-                        security=security or "开放网络", supported=False)
+                        security=security or "开放网络", supported=security in ("", "--") or ("WPA" in security and "802.1X" not in security))
             key = ssid, security
             if key not in networks or (item["active"], item["signal"]) > (networks[key]["active"], networks[key]["signal"]):
                 networks[key] = item

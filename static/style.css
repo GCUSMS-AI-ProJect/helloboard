@@ -1490,3 +1490,13 @@ body.panel-open {
   .mobile-pages a { flex: 1; min-width: 0; justify-content: center; padding-inline: 4px; gap: 5px; white-space: nowrap; }
   .mobile-pages svg { flex: 0 0 18px; width: 18px; height: 18px; }
 }
+
+.workspace.snapshot {
+  display: block;
+}
+.workspace.snapshot .settings {
+  display: none;
+}
+.snapshot div.network-row {
+  cursor: default;
+}
