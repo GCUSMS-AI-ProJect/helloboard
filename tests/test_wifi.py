@@ -209,6 +209,47 @@ class ControllerTests(Base):
         self.assertEqual(self.network.calls, ['lan', 'ap'])
         self.assertEqual(self.store.load()['mode'], 'lan')
 
+    def adopting(self, wait=60):
+        controller = WifiController(self.store, self.network)
+        controller.adopt_current = True
+        controller.boot_wifi_wait = wait
+        return controller
+
+    def test_boot_without_wifi_opens_hotspot_after_wait(self):
+        controller = self.adopting()
+        clock = iter(range(0, 1000, 3))
+        with patch('controller.time.monotonic', side_effect=lambda: next(clock)), \
+                patch.object(controller.stop_event, 'wait', side_effect=[False] * 25 + [True]):
+            controller._monitor()
+        self.assertEqual(self.network.calls, ['ap'])
+        self.assertTrue(controller.fallback)
+        self.assertFalse(controller.adopt_current)
+        self.assertEqual(self.store.load()['mode'], 'ap')
+
+    def test_boot_with_wifi_keeps_current_link(self):
+        self.network.state = {'connected': True, 'mode': 'lan', 'ssid': 'Office', 'address': '10.0.0.5', 'uuid': 'nm'}
+        controller = self.adopting()
+        with patch.object(controller.stop_event, 'wait', side_effect=[True]):
+            controller._monitor()
+        self.assertEqual(self.network.calls, [])
+        self.assertEqual(controller.message, '正在使用当前无线连接。')
+
+    def test_wifi_joining_during_wait_is_adopted(self):
+        controller = self.adopting()
+        states = [{'connected': False}, {'connected': False},
+                  {'connected': True, 'mode': 'lan', 'ssid': 'Office', 'address': '10.0.0.5', 'uuid': 'nm'}]
+        with patch.object(self.network, 'snapshot', side_effect=states + [states[-1]] * 5), \
+                patch.object(controller.stop_event, 'wait', side_effect=[False, False, True]):
+            controller._monitor()
+        self.assertEqual(self.network.calls, [])
+        self.assertTrue(controller.adopt_current)
+
+    def test_boot_wait_zero_keeps_old_behaviour(self):
+        controller = self.adopting(wait=0)
+        with patch.object(controller.stop_event, 'wait', side_effect=[True]):
+            controller._monitor()
+        self.assertEqual(self.network.calls, [])
+
     def test_status_contains_no_passwords_or_uuid(self):
         self.controller.config = self.candidate()
         status = json.dumps(self.controller.public_status())

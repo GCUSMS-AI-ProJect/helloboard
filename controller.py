@@ -2,6 +2,7 @@
 from copy import deepcopy
 import logging
 import threading
+import time
 
 from configuration import validate_network
 from network import NetworkError
@@ -28,6 +29,9 @@ class WifiController:
             self.message = self.capabilities['reason']
         self.fallback = False
         self.monitor_thread = None
+        # Seconds to wait at startup for an existing Wi-Fi link before opening the setup
+        # hotspot. Only used while adopting the host's own connection; 0 disables it.
+        self.boot_wifi_wait = 60
 
     def update(self, phase, message, *, fallback=None):
         with self.state_lock:
@@ -189,9 +193,43 @@ class WifiController:
         self.monitor_thread = threading.Thread(target=self._monitor, daemon=True)
         self.monitor_thread.start()
 
+    def _lan_connected(self):
+        try:
+            status = self.network.snapshot()
+        except NetworkError:
+            return False
+        return bool(status.get('connected')) and status.get('mode') == 'lan'
+
+    def _wait_for_lan(self, seconds):
+        """Poll the adapter until it joins a Wi-Fi network or the time runs out.
+        Runs without the operation lock so the panel stays usable while waiting."""
+        if seconds <= 0 or self._lan_connected():
+            return True
+        self.update('starting', f'正在等待 Wi-Fi 连接（最多 {seconds} 秒）。')
+        deadline = time.monotonic() + seconds
+        while time.monotonic() < deadline:
+            if self.stop_event.wait(min(3.0, max(0.0, deadline - time.monotonic()))):
+                return True
+            if not getattr(self, 'adopt_current', False) or self._lan_connected():
+                return True
+        return False
+
     def _monitor(self):
+        adopting = getattr(self, "adopt_current", False)
+        joined = self._wait_for_lan(self.boot_wifi_wait) if adopting else True
         with self.operation:
-            if getattr(self, "adopt_current", False):
+            if self.stop_event.is_set():
+                return
+            if adopting and not self.adopt_current:
+                pass  # The panel chose a network while we were waiting; it is already applied.
+            elif adopting and not joined:
+                # Nothing to adopt: open the setup hotspot and keep it up like any fallback.
+                self.adopt_current = False
+                try:
+                    self.recover(f'开机 {self.boot_wifi_wait} 秒内没有连上 Wi-Fi。')
+                except NetworkError:
+                    self.update('error', '热点启动失败，稍后会重试。', fallback=True)
+            elif adopting:
                 self.update("ready", "正在使用当前无线连接。")
             elif self.config['mode'] == 'ap' and not self.capabilities['ap']:
                 self.update('error', '这块无线网卡不支持 AP 热点模式。')

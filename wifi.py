@@ -273,6 +273,8 @@ def main():
     parser.add_argument('--dashboard-only', action='store_true', help='Only run the system dashboard; never manage WiFi')
     parser.add_argument('--wifi-snapshot', type=Path, help='Read a host-exported WiFi snapshot in Docker')
     parser.add_argument('--wifi-control-socket', type=Path, help='Delegate Wi-Fi operations to the host adapter')
+    parser.add_argument('--boot-wifi-wait', type=int, default=60,
+                        help='Seconds to wait at startup for Wi-Fi before opening the setup hotspot (0 disables)')
     args = parser.parse_args()
     if args.wifi_control_socket and (args.wifi_snapshot or args.dashboard_only):
         parser.error('select one Wi-Fi backend')
@@ -294,6 +296,7 @@ def main():
         controller = WifiController(ConfigStore(args.config), net, preview=args.preview, capabilities=wifi_caps)
         controller.selection_marker = args.config.with_suffix('.selected')
         controller.adopt_current = not has_selection
+        controller.boot_wifi_wait = max(0, args.boot_wifi_wait)
     elif args.wifi_snapshot:
         from pi_dashboard import DashboardAuthenticator, PiWifi
         controller = PiWifi(args.wifi_snapshot, args.interface or 'wlan0')
