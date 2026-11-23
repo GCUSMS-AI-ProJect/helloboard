@@ -22,14 +22,15 @@ Windows/Linux/macOS 客户端的 `.local` 支持依系统配置而异，不能�
 
 ## Linux 运行方式
 
-需要 Python 3.10+；Debian / Ubuntu 可按需安装 `python3-venv`。首次启动前按 README 创建虚拟环境并安装依赖。
+需要 Python 3.10+。Debian、Ubuntu 和 Raspberry Pi OS 可安装 `python3-venv`。安装脚本会创建虚拟环境并安装依赖。
 
 | 命令 | 行为 |
 | --- | --- |
-| `.venv/bin/python wifi.py --dashboard-only` | 仅系统监测，默认端口 8090，不管理 WiFi。 |
+| `bash install.sh --local --start` | 在当前目录安装并启动系统看板，默认端口 8090。普通 Docker 容器会自动选择此模式。 |
+| `bash start.sh` | 在终端启动已安装的系统看板。 |
 | `.venv/bin/python wifi.py --preview --port 8090` | 读取实际状态并允许可用的扫描，禁止切网、修改热点密码与终止进程。 |
-| `sudo bash install.sh` | 安装到 `/opt/helloboard`，默认仅系统看板，尚未启动服务。 |
-| `sudo bash install.sh --with-wifi` | 安装并配置 WiFi 管理；随后启动服务才应用网络模式。 |
+| `sudo bash install.sh --start` | 安装到 `/opt/helloboard`、启动系统看板并设置开机自启。 |
+| `sudo bash install.sh --with-wifi --start` | 安装并启动宿主机 Wi-Fi 管理，启动时应用保存的网络模式。 |
 
 WiFi 管理需要已启动的 NetworkManager、受管理的无线网卡和 root 权限。Debian 系列可安装 `network-manager dnsmasq-base`；应按设备现有网络方案安排迁移。无线接口自动探测，也可用 `--interface 接口名` 指定。AP 需网卡支持热点。
 
@@ -43,7 +44,7 @@ sudo systemctl restart helloboard
 sudo systemctl disable --now helloboard
 ```
 
-服务默认监听所有 IPv4 接口的 80 端口；手动运行可用 `--port` 指定端口。没有 systemd 的 Linux 可直接运行程序，自启交由该系统的服务管理器。WSL / 容器只展示自身环境，不代表宿主机全部指标。
+原生服务默认监听所有 IPv4 接口的 80 端口，环境变量位于 `/etc/helloboard/helloboard.env`。手动运行可用 `bash start.sh --port 8091` 指定端口。Docker 的自启使用容器重启策略。WSL 和容器的看板以当前运行环境能读取的指标为准。 [环境变量及 Docker 部署](getting-started.md#environment-variables)
 
 ## Windows
 

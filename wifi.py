@@ -264,22 +264,24 @@ def create_app(controller, *, authenticator=None, metrics=None, processes=None, 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--config', type=Path, default=ROOT / 'wifi.yaml')
-    parser.add_argument('--interface', help='Wireless adapter; detected automatically when omitted')
-    parser.add_argument('--host', default='0.0.0.0')
-    parser.add_argument('--port', type=int, default=8090)
+    parser.add_argument('--config', type=Path, default=os.environ.get('HELLOBOARD_CONFIG') or ROOT / 'wifi.yaml')
+    parser.add_argument('--interface', default=os.environ.get('HELLOBOARD_INTERFACE'),
+                        help='Wireless adapter; detected automatically when omitted')
+    parser.add_argument('--host', default=os.environ.get('HELLOBOARD_HOST', '0.0.0.0'))
+    parser.add_argument('--port', type=int, default=os.environ.get('HELLOBOARD_PORT', '8090'))
     parser.add_argument('--preview', action='store_true', help='Read-only preview: never changes network settings')
-    parser.add_argument('--auth-user', help='System login account used to authorize protected actions')
-    parser.add_argument('--dashboard-only', action='store_true', help='Only run the system dashboard; never manage WiFi')
-    parser.add_argument('--wifi-snapshot', type=Path, help='Read a host-exported WiFi snapshot in Docker')
-    parser.add_argument('--wifi-control-socket', type=Path, help='Delegate Wi-Fi operations to the host adapter')
-    parser.add_argument('--boot-wifi-wait', type=int, default=60,
+    parser.add_argument('--auth-user', default=os.environ.get('HELLOBOARD_AUTH_USER'),
+                        help='System login account used to authorize protected actions')
+    backend = parser.add_mutually_exclusive_group()
+    backend.add_argument('--dashboard-only', action='store_true', help='Only run the system dashboard; never manage WiFi')
+    backend.add_argument('--native-wifi', action='store_true', help='Use the local NetworkManager when available')
+    backend.add_argument('--wifi-snapshot', type=Path, help='Read a host-exported WiFi snapshot in Docker')
+    backend.add_argument('--wifi-control-socket', type=Path, help='Delegate Wi-Fi operations to the host adapter')
+    parser.add_argument('--boot-wifi-wait', type=int, default=os.environ.get('HELLOBOARD_BOOT_WIFI_WAIT', '60'),
                         help='Seconds to wait at startup for Wi-Fi before opening the setup hotspot (0 disables)')
     args = parser.parse_args()
-    if args.wifi_control_socket and (args.wifi_snapshot or args.dashboard_only):
-        parser.error('select one Wi-Fi backend')
-    if args.wifi_snapshot and args.dashboard_only:
-        parser.error('choose either --wifi-snapshot or --dashboard-only')
+    if not (args.native_wifi or args.wifi_snapshot or args.wifi_control_socket):
+        args.dashboard_only = args.dashboard_only or os.environ.get('HELLOBOARD_WIFI_MODE') == 'dashboard'
     if not 1 <= args.port <= 65535:
         parser.error('--port must be between 1 and 65535')
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')

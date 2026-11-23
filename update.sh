@@ -35,7 +35,7 @@ if [[ ! -x "$installed_dir/.venv/bin/python" || ! -f "$installed_dir/wifi.yaml" 
   exit 1
 fi
 "$installed_dir/.venv/bin/python" -c 'import flask, yaml, waitress'
-for item in wifi.py web_assets.py authentication.py pam_auth.py configuration.py controller.py network.py system_metrics.py portable_metrics.py host_platform.py pi_dashboard.py process_control.py requirements.txt README.md install.sh update.sh static templates systemd/helloboard.service systemd/helloboard.pam tools/relocate_venv.py tools/install_pam.py; do
+for item in wifi.py web_assets.py authentication.py pam_auth.py configuration.py controller.py network.py network_bridge.py system_metrics.py portable_metrics.py host_platform.py pi_dashboard.py process_control.py requirements.txt README.md install.sh start.sh update.sh static templates systemd/helloboard.service systemd/helloboard.env systemd/helloboard.pam tools/relocate_venv.py tools/install_pam.py; do
   [[ -e "$source_dir/$item" ]] || { echo "更新文件缺失：$item" >&2; exit 1; }
 done
 # Install new dependencies before stopping the running service. A download failure
@@ -72,10 +72,10 @@ if $migrating; then
 fi
 
 if [[ "$source_dir" != "$target_dir" ]]; then
-  for file in wifi.py web_assets.py authentication.py pam_auth.py configuration.py controller.py network.py system_metrics.py portable_metrics.py host_platform.py pi_dashboard.py process_control.py requirements.txt README.md; do
+  for file in wifi.py web_assets.py authentication.py pam_auth.py configuration.py controller.py network.py network_bridge.py system_metrics.py portable_metrics.py host_platform.py pi_dashboard.py process_control.py requirements.txt README.md; do
     install -m 644 "$source_dir/$file" "$target_dir/$file"
   done
-  for file in install.sh update.sh; do
+  for file in install.sh start.sh update.sh; do
     install -m 755 "$source_dir/$file" "$target_dir/$file"
   done
   for directory in static templates systemd tools; do
@@ -90,6 +90,13 @@ rm -rf -- "$target_dir/static/vendor/xterm"
 chmod 600 "$target_dir/wifi.yaml"
 if [[ ! -f "$unit_dir/$service" ]]; then
   install -m 644 "$source_dir/systemd/$service" "$unit_dir/$service"
+fi
+install -d -m 755 /etc/helloboard
+if [[ ! -e /etc/helloboard/helloboard.env ]]; then
+  install -m 600 "$target_dir/systemd/helloboard.env" /etc/helloboard/helloboard.env
+fi
+if ! grep -Fxq 'EnvironmentFile=-/etc/helloboard/helloboard.env' "$unit_dir/$service"; then
+  sed -i '/^\[Service\]$/a EnvironmentFile=-/etc/helloboard/helloboard.env' "$unit_dir/$service"
 fi
 # Keep existing interface/auth-user arguments and service overrides during migration.
 for unit in "$unit_dir/$service" "$unit_dir/$service.d/"*.conf; do

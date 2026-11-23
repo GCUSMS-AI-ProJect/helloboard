@@ -6,7 +6,7 @@
   <a href="#features">Features</a> ·
   <a href="#screenshots">Screenshots</a> ·
   <a href="#quick-start">Quick start</a> ·
-  <a href="#docker">Docker</a> ·
+  <a href="#docker-image">Docker</a> ·
   <a href="docs/project-guide.md">中文指南</a>
 </p>
 
@@ -51,40 +51,37 @@ The screenshots use example device, network, and proxy settings.
 
 ## Quick start
 
-Use Python 3.10 or later. On Debian, Ubuntu, and Raspberry Pi OS, install the prerequisites and run:
+HelloBoard uses the same source on Raspberry Pi OS, Debian, Ubuntu, and in Linux containers. Run the installer from your checkout. It detects a systemd host or installs into a local Python virtual environment.
+
+### Raspberry Pi OS, Debian, or Ubuntu
 
 ```bash
 sudo apt install git python3 python3-venv
 git clone https://github.com/GCUSMS-AI-ProJect/helloboard.git
 cd helloboard
-python3 -m venv .venv
-.venv/bin/python -m pip install -r requirements.txt
-.venv/bin/python wifi.py --dashboard-only
+sudo bash install.sh --start
 ```
 
-Open [HelloBoard on port 8090](http://localhost:8090) on the device, or use the device's private IP from the same network. Dashboard-only mode leaves the network configuration to the host.
+Open the device’s IP in a browser. The service starts at boot and listens on port 80 by default. Its environment file is `/etc/helloboard/helloboard.env`. To run in your terminal instead, use `bash install.sh --local --start` and open port 8090.
 
-### Linux service and Wi-Fi management
+To enable native Wi-Fi management on a new installation, use `sudo bash install.sh --with-wifi --start`. This requires NetworkManager and a managed adapter. Hotspot mode also requires AP support. The service applies the saved network mode at startup. [Installation, settings, and updates](docs/getting-started.md)
 
-Stop the foreground dashboard, then install the systemd service to use port 80.
+For local discovery on Debian or Ubuntu, install `avahi-daemon` and run `sudo python3 tools/enable_local_name.py`. Open `http://helloboard.local` from an mDNS-capable client on the same network. [Local discovery guide](docs/operations.md)
 
-```bash
-sudo bash install.sh
-sudo systemctl enable --now helloboard
-```
+### In an existing Linux container
 
-To enable Wi-Fi management on a new installation, run `sudo bash install.sh --with-wifi` in place of the default install command. It requires NetworkManager and a managed adapter. Hotspot mode also requires AP support. The service applies your saved network mode when it starts. [Installation and updates](docs/getting-started.md)
+With Python 3.10+ and `venv` available, run `bash install.sh --start` inside the checkout. The installer uses `.venv/` and starts HelloBoard in the foreground on port 8090. Use `bash start.sh` for subsequent starts. Publish the port when creating the container.
 
-For local discovery on Debian or Ubuntu, install `avahi-daemon` and run `sudo python3 tools/enable_local_name.py`. Open [helloboard.local](http://helloboard.local) on the same network from an mDNS-capable client. [Local discovery guide](docs/operations.md)
+## Docker image
 
-## Docker
-
-Build and start a system dashboard on the Docker host:
+Run these commands on the Docker host to build a standalone dashboard with automatic restart.
 
 ```bash
 docker build -t helloboard .
-docker run --rm -p 127.0.0.1:8090:8090 helloboard
+docker run -d --name helloboard --restart unless-stopped -p 127.0.0.1:8090:8090 helloboard
 ```
+
+Open `http://localhost:8090` on the Docker host. Pass `-e HELLOBOARD_PORT=8080` and publish `127.0.0.1:8090:8080` to use port 8080 inside the container.
 
 For read-only host Wi-Fi status, run the snapshot exporter on the host every 15 seconds:
 
@@ -95,12 +92,12 @@ python3 tools/export_wifi_snapshot.py ./wifi-cache --interface wlan0
 Mount the snapshot directory when starting the container:
 
 ```bash
-docker run --rm -p 127.0.0.1:8090:8090 \
+docker run --rm -p 127.0.0.1:8091:8090 \
   -v "$PWD/wifi-cache:/run/helloboard-wifi:ro" \
   helloboard --wifi-snapshot /run/helloboard-wifi/latest.json --interface wlan0
 ```
 
-Replace `wlan0` with the host adapter in both commands. Snapshots expire after 90 seconds. For optional snapshot-mode panel login, mount a private Werkzeug password hash at `/home/helloboard/.helloboard-password-hash` and grant the container user read access.
+Replace `wlan0` with the host adapter in both commands and open `http://localhost:8091`. Snapshots expire after 90 seconds. For optional snapshot-mode panel login, mount a private Werkzeug password hash at `/home/helloboard/.helloboard-password-hash` and grant the container user read access.
 
 For a Raspberry Pi container with host Wi-Fi management and the Bash proxy panel, use the deployment repository. It provisions the host services that the container calls. [Raspberry Pi Docker deployment](https://github.com/GCUSMS-AI-ProJect/hello_docker_pi)
 

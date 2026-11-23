@@ -25,7 +25,7 @@ class DeploymentTests(unittest.TestCase):
         self.source = self.root / 'source'
         self.source.mkdir()
         for name in ['wifi.py', 'web_assets.py','authentication.py','pam_auth.py','configuration.py','controller.py',
-                     'network.py','system_metrics.py','portable_metrics.py','host_platform.py','pi_dashboard.py','process_control.py','requirements.txt','README.md','install.sh','update.sh']:
+                     'network.py','network_bridge.py','system_metrics.py','portable_metrics.py','host_platform.py','pi_dashboard.py','process_control.py','requirements.txt','README.md','install.sh','start.sh','update.sh']:
             shutil.copy2(ROOT / name, self.source / name)
         for name in ['static','templates','systemd','tools']:
             shutil.copytree(ROOT / name, self.source / name, ignore=shutil.ignore_patterns('__pycache__'))
@@ -47,8 +47,10 @@ class DeploymentTests(unittest.TestCase):
         (self.legacy / 'wifi.yaml').write_bytes(self.config)
         (self.pam / 'hellowifi').write_text('legacy policy')
         unit = (ROOT / 'systemd/helloboard.service').read_text().replace('/opt/helloboard', str(self.legacy))
-        unit = unit.replace('Environment=MALLOC_ARENA_MAX=2\n', '')
-        unit = unit.replace('--port 80', '--port 80 --interface wlan9 --auth-user piuser')
+        unit = unit.replace('Environment=MALLOC_ARENA_MAX=2\nEnvironment=HELLOBOARD_PORT=80\n'
+                            'EnvironmentFile=-/etc/helloboard/helloboard.env\n', '')
+        unit = unit.replace(f'ExecStart=/bin/bash {self.legacy}/start.sh --dashboard-only',
+            f'ExecStart={self.legacy}/.venv/bin/python {self.legacy}/wifi.py --port 80 --interface wlan9 --auth-user piuser')
         unit = unit.replace('After=network.target', 'Requires=NetworkManager.service\nAfter=NetworkManager.service')
         (self.units / 'hellosms-wifi.service').write_text(unit)
         override = self.units / 'hellosms-wifi.service.d'
@@ -83,6 +85,8 @@ elif args[0] == 'disable':
     s['enabled'][args[-1]] = 'disabled'
 elif args[0] == 'enable':
     s['enabled'][args[-1]] = 'enabled-runtime' if '--runtime' in args else 'enabled'
+    if '--now' in args:
+        s.setdefault('active', {})[args[-1]] = True
 p.write_text(json.dumps(s))
 sys.exit(code)
 ''')
@@ -94,6 +98,7 @@ sys.exit(code)
         script = script.replace('if [[ $EUID -ne 0 ]]; then', 'if false; then', 1)
         script = script.replace('/opt/helloboard', str(self.target)).replace('/opt/hellosms-wifi', str(self.legacy))
         script = script.replace('/etc/systemd/system', str(self.units)).replace('/etc/pam.d', str(self.pam))
+        script = script.replace('/etc/helloboard', str(self.root / 'etc/helloboard'))
         # The helper receives the private test PAM directory rather than /etc.
         helper = self.source / 'tools/install_pam.py'
         helper.write_text(helper.read_text().replace("Path('/etc/pam.d')", 'Path(' + repr(str(self.pam)) + ')'))
@@ -124,6 +129,9 @@ sys.exit(code)
         self.assertNotIn('Requires=NetworkManager.service', unit)
         self.assertIn('Wants=NetworkManager.service', unit)
         self.assertEqual(unit.count('Environment=MALLOC_ARENA_MAX=2'), 1)
+        env_file = self.root / 'etc/helloboard/helloboard.env'
+        self.assertIn(f'EnvironmentFile=-{env_file}', unit)
+        self.assertTrue(env_file.is_file())
         self.assertIn(str(self.target), (self.units / 'helloboard.service.d/custom.conf').read_text())
         self.assertTrue((self.pam / 'helloboard').exists())
         for retired in ['terminal.py','static/terminal.js','static/terminal.css','templates/terminal.html','static/vendor/xterm']:
@@ -207,7 +215,7 @@ sys.exit(code)
         self.assertEqual(launcher.read_bytes(), b'\xff\xfe\x00')
         self.assertTrue((self.legacy / '.venv/bin/python').is_symlink())
 
-    def test_fresh_install_selects_dashboard_or_wifi_without_starting_service(self):
+    def prepare_installer(self, *, systemd=True):
         shutil.rmtree(self.legacy)
         mock_nmcli = self.root / 'bin/nmcli'
         mock_nmcli.write_text('#!/bin/sh\nexit 0\n')
@@ -215,13 +223,22 @@ sys.exit(code)
         script = (ROOT / 'install.sh').read_text()
         script = script.replace('if [[ $EUID -ne 0 ]]; then', 'if false; then', 1)
         script = script.replace('/opt/helloboard', str(self.target)).replace('/opt/hellosms-wifi', str(self.legacy))
-        script = script.replace('/etc/systemd/system', str(self.units)).replace('/run/systemd/system', str(self.units))
-        script = script.replace('python3 -m venv "$target_dir/.venv"',
-            'mkdir -p "$target_dir/.venv/bin"\nln -sf ' + repr(sys.executable) + ' "$target_dir/.venv/bin/python"')
-        script = script.replace('"$target_dir/.venv/bin/pip" install -r "$target_dir/requirements.txt"',
-            '"$target_dir/.venv/bin/python" -c "import flask, yaml, waitress"')
+        script = script.replace('/etc/systemd/system', str(self.units))
+        script = script.replace('/etc/helloboard', str(self.root / 'etc/helloboard'))
+        start = script.index('running_systemd() {')
+        end = script.index('\nif [[ "$mode" == auto ]]', start)
+        systemd_result = 'true' if systemd else 'false'
+        script = script[:start] + f'running_systemd() {{ {systemd_result}; }}\n' + script[end:]
+        script = script.replace('python3 -m venv "$directory/.venv"',
+            '{ mkdir -p "$directory/.venv/bin" && ln -sf ' + repr(sys.executable) + ' "$directory/.venv/bin/python"; }')
+        script = script.replace('"$directory/.venv/bin/python" -m pip install -r "$source_dir/requirements.txt"',
+            '"$directory/.venv/bin/python" -c "import flask, yaml, waitress"')
         installer = self.source / 'install.sh'
         installer.write_text(script)
+        return installer
+
+    def test_fresh_install_selects_dashboard_or_wifi_without_starting_service(self):
+        installer = self.prepare_installer()
         for args in [[], ['--with-wifi']]:
             result = subprocess.run(['bash', str(installer), *args], env=self.env,
                                     capture_output=True, text=True, timeout=15)
@@ -233,3 +250,24 @@ sys.exit(code)
             self.assertTrue((self.target / 'host_platform.py').exists())
             self.assertTrue((self.target / 'portable_metrics.py').exists())
             self.assertFalse(any(c[0] in ('start', 'restart', 'stop') for c in self.state()['calls']))
+        self.assertIn('--native-wifi', unit)
+        env_file = self.root / 'etc/helloboard/helloboard.env'
+        self.assertEqual(env_file.stat().st_mode & 0o777, 0o600)
+        env_file.write_text('HELLOBOARD_PORT=8087\n')
+        result = subprocess.run(['bash', str(installer), '--start'], env=self.env,
+                                capture_output=True, text=True, timeout=15)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(env_file.read_text(), 'HELLOBOARD_PORT=8087\n')
+        self.assertIn(['enable', '--now', 'helloboard.service'], self.state()['calls'])
+
+    def test_container_auto_installs_locally_and_rejects_native_wifi(self):
+        installer = self.prepare_installer(systemd=False)
+        result = subprocess.run(['bash', str(installer)], env=self.env,
+                                capture_output=True, text=True, timeout=15)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue((self.source / '.venv/bin/python').is_file())
+        result = subprocess.run(['bash', str(installer), '--with-wifi'], env=self.env,
+                                capture_output=True, text=True, timeout=15)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse(self.target.exists())
+        self.assertEqual(self.state()['calls'], [])

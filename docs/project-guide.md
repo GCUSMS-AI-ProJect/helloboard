@@ -107,11 +107,9 @@ sudo dpkg -i ./helloboard_0.1.0-1_amd64.deb
 需要 **Python 3.10+**。以下命令以 Linux 为例，默认启动系统看板，不切换 WiFi：
 
 ```bash
-git clone https://gitee.com/gcusms/helloboard.git
+git clone https://github.com/GCUSMS-AI-ProJect/helloboard.git
 cd helloboard
-python3 -m venv .venv
-.venv/bin/python -m pip install -r requirements.txt
-.venv/bin/python wifi.py --dashboard-only
+bash install.sh --local --start
 ```
 
 访问 `http://127.0.0.1:8090`；其他局域网设备使用主机实际 IP。
@@ -130,11 +128,12 @@ Windows 在项目目录中运行：
 在支持 systemd 的系统中安装并启用看板服务，默认 HTTP 端口为 **80**：
 
 ```bash
-sudo bash install.sh
-sudo systemctl enable --now helloboard
+sudo bash install.sh --start
 ```
 
-需要接管设备 WiFi 时，首次安装改用 `sudo bash install.sh --with-wifi`。首次启用按本地配置切换网络，默认创建名为 `hellosms`、地址为 `192.168.11.17` 的开放热点；建议先设置热点密码，并准备有线连接或本地终端。
+新安装需要管理设备 Wi-Fi 时，使用 `sudo bash install.sh --with-wifi --start`。首次启动会应用本地网络配置，默认创建名为 `hellosms`、地址为 `192.168.11.17` 的开放热点。准备有线连接或本地终端，并在设置后为热点配置密码。
+
+在普通 Linux 容器内执行 `bash install.sh --start`，默认在前台启动。独立镜像的端口映射、自启以及树莓派的硬件桥接见 [Docker 部署](../README.md#docker-image)。
 
 更新已安装的服务：
 

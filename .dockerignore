@@ -1,6 +1,8 @@
 *
 !Dockerfile
 !requirements.txt
+!install.sh
+!start.sh
 !*.py
 !static/
 !static/**

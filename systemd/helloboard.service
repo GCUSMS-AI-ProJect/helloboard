@@ -7,9 +7,11 @@ StartLimitBurst=5
 [Service]
 Type=simple
 Environment=MALLOC_ARENA_MAX=2
+Environment=HELLOBOARD_PORT=80
+EnvironmentFile=-/etc/helloboard/helloboard.env
 User=root
 WorkingDirectory=/opt/helloboard
-ExecStart=/opt/helloboard/.venv/bin/python /opt/helloboard/wifi.py --port 80 --dashboard-only
+ExecStart=/bin/bash /opt/helloboard/start.sh --dashboard-only
 Restart=on-failure
 RestartSec=8
 TimeoutStopSec=15
