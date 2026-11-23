@@ -115,7 +115,7 @@ def create_app(controller, *, authenticator=None, metrics=None, processes=None, 
 
     def proxy_call(payload):
         with socket.socket(socket.AF_UNIX) as client:
-            client.settimeout(8)
+            client.settimeout(12)
             client.connect(proxy_socket)
             client.sendall(json.dumps(payload).encode() + b'\n')
             with client.makefile('rb') as stream:
@@ -142,11 +142,15 @@ def create_app(controller, *, authenticator=None, metrics=None, processes=None, 
         if not isinstance(data, dict):
             raise ValueError('配置格式不正确。')
         settings = dict(host=data.get('host'), port=data.get('port'), enabled=data.get('enabled'))
+        for key in ('protocol', 'bypass', 'timeout'):
+            if key in data:
+                settings[key] = data[key]
         if request.path.endswith('/test'):
             proxy_call(dict(action='test', **settings))
             session['proxy_test'] = settings
             return jsonify(ok=True)
-        if settings['enabled'] and session.pop('proxy_test', None) != settings:
+        tested = session.pop('proxy_test', None)
+        if settings['enabled'] and tested != settings:
             proxy_call(dict(action='test', **settings))
         return jsonify(proxy_call(dict(action='save', **settings)))
 

@@ -20,7 +20,7 @@
 | Process management | Search and sort processes by CPU or memory. On supported Linux deployments, verify your system account to terminate selected processes. |
 | Wi-Fi and device hotspot | Scan for networks, reconnect to saved networks, and switch between Wi-Fi and hotspot mode on compatible NetworkManager devices. |
 | Setup hotspot | On first startup with host Wi-Fi control, give NetworkManager 60 seconds by default to join a network. If it cannot connect in time, open the setup hotspot and retain the saved configuration. |
-| Bash proxy | Test an HTTP proxy before saving it to the host user's Bash configuration, and turn it off from the same page. Requires the host proxy service. |
+| Bash proxy | Configure HTTP, HTTPS, or SOCKS5, set a direct-connection list and test timeout, then test or save the host user's Bash settings. Requires the host proxy service. |
 | Responsive interface | Use the dashboard on desktop or mobile in English or Chinese, with light and dark themes and compact or spacious layouts. |
 
 HelloBoard uses Flask, Waitress, and browser-native HTML, CSS, and JavaScript. It serves its fonts and icons locally. See the benchmark summary for the sampling design and historical memory and transfer measurements. [Benchmark summary](docs/benchmarks.md)
@@ -41,7 +41,9 @@ HelloBoard uses Flask, Waitress, and browser-native HTML, CSS, and JavaScript. I
 
 ### Bash proxy
 
-![Bash proxy page with the enable switch, host, port, and save button](docs/images/proxy-settings.png)
+![Bash proxy page with protocol, host, port, bypass list, timeout, and test controls](docs/images/proxy-settings.png)
+
+**Test connection** checks the proxy without writing any settings. Saving an enabled proxy checks connectivity through `http://ipinfo.io` before updating the host user's Bash. Enter comma-separated hosts or addresses in the bypass list to connect to them directly.
 
 ### Mobile layout
 

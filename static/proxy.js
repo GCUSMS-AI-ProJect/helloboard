@@ -31,19 +31,31 @@ async function post(path, body, signal) {
   return data;
 }
 let testRequest;
+let pendingSave;
+const form = el("proxy-form");
+const saveButton = form.querySelector("button[type=submit]");
+const testButton = el("test-connection");
 function cancelTest() {
   testRequest?.abort();
   if (el("proxy-test").open) el("proxy-test").close();
 }
 el("cancel-test").onclick = cancelTest;
 el("proxy-test").addEventListener("cancel", cancelTest);
-async function save() {
-  const submit = el("proxy-form").querySelector("button[type=submit]");
-  if (submit.disabled) return;
-  submit.disabled = true;
+async function applySettings(save) {
+  if (saveButton.disabled) return;
+  const enabled = mode.dataset.mode === "on";
+  const host = el("host").value.trim();
+  el("host").required = enabled || !save;
+  if (!form.reportValidity()) return;
+  const settings = {enabled, host, port: el("port").valueAsNumber};
+  if (el("protocol")) {
+    settings.protocol = el("protocol").value;
+    settings.bypass = el("bypass").value.trim();
+    settings.timeout = el("timeout").valueAsNumber;
+  }
+  saveButton.disabled = testButton.disabled = true;
   try {
-    const settings = {enabled: mode.dataset.mode === "on", host: el("host").value.trim(), port: el("port").valueAsNumber};
-    if (settings.enabled) {
+    if (enabled || !save) {
       testRequest = new AbortController();
       el("proxy-test").showModal();
       try {
@@ -54,21 +66,31 @@ async function save() {
         testRequest = null;
       }
     }
-    await post("bash-proxy", settings);
-    feedback(settings.enabled ? t("Successful · 联网成功，已保存") : t("代理已关闭"));
+    if (save) {
+      await post("bash-proxy", settings);
+      feedback(t(enabled ? "Successful · 联网成功，已保存" : "代理已关闭"));
+    } else feedback(t("代理连接成功"));
   } catch (error) {
     if (error.name === "AbortError") { feedback(t("已取消")); return; }
-    if (error.login) { el("auth-error").textContent = ""; el("login").showModal(); el("password").focus(); }
-    else feedback(error.message);
-  } finally { submit.disabled = false; }
+    if (error.login) {
+      pendingSave = save;
+      el("auth-error").textContent = "";
+      el("login").showModal();
+      el("password").focus();
+    } else feedback(error.message);
+  } finally {
+    saveButton.disabled = testButton.disabled = false;
+  }
 }
-el("proxy-form").onsubmit = event => { event.preventDefault(); save(); };
+form.noValidate = true;
+form.onsubmit = event => { event.preventDefault(); applySettings(true); };
+testButton.onclick = () => applySettings(false);
 el("auth-form").onsubmit = async event => {
   event.preventDefault();
   try {
     await post("authorize", {username: el("username").value, password: el("password").value});
     el("login").close();
-    await save();
+    await applySettings(pendingSave);
   } catch (error) { el("auth-error").textContent = error.message; }
   finally { el("password").value = ""; }
 };

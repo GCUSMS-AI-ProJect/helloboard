@@ -17,12 +17,32 @@
             {% endfor %}
           </div>
           <div class="proxy-fields">
-            <label><span data-i18n="代理主机">代理主机</span><input id="host" required maxlength="253" value="{{ settings.host }}"></label>
+            {% if settings.protocol is defined %}
+            <label><span data-i18n="代理协议">代理协议</span>
+              <select id="protocol">
+                {% for value, label in [('http', 'HTTP'), ('https', 'HTTPS'), ('socks5h', 'SOCKS5')] %}
+                <option value="{{ value }}"{% if value == settings.protocol %} selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            {% endif %}
+            <label><span data-i18n="代理主机">代理主机</span><input id="host" maxlength="253" value="{{ settings.host }}" autocomplete="off" spellcheck="false"></label>
             <label><span data-i18n="端口">端口</span><input id="port" type="number" required min="1" max="65535" value="{{ settings.port }}"></label>
           </div>
-          <p class="muted">保存后在新终端生效。当前终端可运行 <code>source ~/.bashrc</code>。</p>
-          <button class="primary-button" type="submit" data-i18n="保存设置">保存设置</button>
-          
+          {% if settings.protocol is defined %}
+          <div class="proxy-advanced">
+            <label><span data-i18n="直连列表">直连列表</span>
+              <input id="bypass" maxlength="512" value="{{ settings.bypass }}" placeholder="localhost,127.0.0.1,.local" aria-describedby="bypass-hint" autocomplete="off" spellcheck="false">
+              <small id="bypass-hint" class="muted" data-i18n="用逗号分隔，列表中的地址直接连接。">用逗号分隔，列表中的地址直接连接。</small>
+            </label>
+            <label><span data-i18n="测试超时（秒）">测试超时（秒）</span><input id="timeout" type="number" required min="3" max="10" value="{{ settings.timeout }}"></label>
+          </div>
+          {% endif %}
+          <div class="proxy-actions">
+            <button class="primary-button" type="submit" data-i18n="保存设置">保存设置</button>
+            <button id="test-connection" class="secondary-button" type="button" data-i18n="测试连接">测试连接</button>
+          </div>
+          <p class="muted"><span data-i18n="设置在新终端生效。当前终端可运行">设置在新终端生效。当前终端可运行</span> <code>source ~/.bashrc</code></p>
         </form>
       </section>
     </main></div>
@@ -39,6 +59,6 @@
       <p id="auth-error" role="alert" class="field-error"></p>
       <div class="dialog-actions"><button type="button" id="cancel" class="secondary-button" data-i18n="取消">取消</button><button type="submit" class="primary-button" data-i18n="验证">验证</button></div>
     </form></dialog>
-    <dialog id="side-panel" class="side-panel"><div class="dialog-heading"><h2 id="panel-title"></h2><button type="button" id="panel-close" class="icon-button" aria-label="关闭">×</button></div><section id="help-content" class="drawer-content">代理设置应用于宿主机用户的 Bash。</section>{% include 'layout_options.html' %}</dialog>
+    <dialog id="side-panel" class="side-panel"><div class="dialog-heading"><h2 id="panel-title"></h2><button type="button" id="panel-close" class="icon-button" aria-label="关闭">×</button></div><section id="help-content" class="drawer-content" data-i18n="代理设置应用于宿主机用户的 Bash。">代理设置应用于宿主机用户的 Bash。</section>{% include 'layout_options.html' %}</dialog>
   </body>
 </html>
