@@ -1,4 +1,27 @@
 <!doctype html>
+{% macro proxy_select(id, label, options, selected) %}
+  <div class="proxy-select">
+    <label id="{{ id }}-label" for="{{ id }}" data-i18n="{{ label }}">{{ label }}</label>
+    <div class="proxy-select-control">
+      <select id="{{ id }}">
+        {% for value, text in options %}
+          <option value="{{ value }}" data-i18n="{{ text }}"{% if value == selected %} selected{% endif %}>{{ text }}</option>
+        {% endfor %}
+      </select>
+      <button id="{{ id }}-trigger" class="proxy-select-trigger" type="button" role="combobox"
+              aria-labelledby="{{ id }}-label {{ id }}-value" aria-controls="{{ id }}-menu" aria-expanded="false" hidden>
+        <span id="{{ id }}-value"></span>
+        <svg aria-hidden="true"><use href="#i-chevron" /></svg>
+      </button>
+      <ul id="{{ id }}-menu" class="proxy-select-menu" role="listbox" aria-labelledby="{{ id }}-label" hidden>
+        {% for value, text in options %}
+          <li id="{{ id }}-option-{{ loop.index }}" role="option" data-value="{{ value }}"
+              aria-selected="{{ 'true' if value == selected else 'false' }}" data-i18n="{{ text }}">{{ text }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+{% endmacro %}
 <html lang="zh-CN" data-layout="compact">
   {% set page_name = '代理' %}{% set page_script = 'proxy.js' %}
   {% include 'head.html' %}
@@ -20,25 +43,15 @@
           </div>
           <div class="proxy-fields">
             {% if settings.protocol is defined %}
-            <label><span data-i18n="代理协议">代理协议</span>
-              <select id="protocol">
-                {% for value, label in [('http', 'HTTP'), ('https', 'HTTPS'), ('socks5', 'SOCKS5')] %}
-                <option value="{{ value }}"{% if value == selected_protocol %} selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-              </select>
-            </label>
+            {{ proxy_select('protocol', '代理协议', [('http', 'HTTP'), ('https', 'HTTPS'), ('socks5', 'SOCKS5')], selected_protocol) }}
             {% endif %}
             <label><span data-i18n="代理主机">代理主机</span><input id="host" maxlength="253" value="{{ settings.host }}" autocomplete="off" spellcheck="false"></label>
             <label><span data-i18n="端口">端口</span><input id="port" type="number" required min="1" max="65535" value="{{ settings.port }}"></label>
           </div>
           {% if settings.protocol is defined %}
-          <label id="dns-field" class="proxy-dns"{% if not socks_selected %} hidden{% endif %}>
-            <span data-i18n="DNS 解析">DNS 解析</span>
-            <select id="proxy-dns">
-              <option value="socks5h" data-i18n="代理端解析">代理端解析</option>
-              <option value="socks5" data-i18n="本机解析"{% if settings.protocol == 'socks5' %} selected{% endif %}>本机解析</option>
-            </select>
-          </label>
+          <div id="dns-field"{% if not socks_selected %} hidden{% endif %}>
+            {{ proxy_select('proxy-dns', 'DNS 解析', [('socks5h', '代理端解析'), ('socks5', '本机解析')], 'socks5' if settings.protocol == 'socks5' else 'socks5h') }}
+          </div>
           <div class="proxy-advanced">
             <label><span data-i18n="直连列表">直连列表</span>
               <input id="bypass" maxlength="512" value="{{ settings.bypass }}" placeholder="localhost,127.0.0.1,.local" aria-describedby="bypass-hint" autocomplete="off" spellcheck="false">

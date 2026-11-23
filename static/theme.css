@@ -105,7 +105,7 @@
   --shadow-toast: #00000066;
 }
 dialog,
-.saved-network-menu {
+:is(.saved-network-menu, .proxy-select-menu) {
   background: var(--surface-raised);
 }
 input,
@@ -153,7 +153,7 @@ input:-webkit-autofill {
 }
 @media (prefers-reduced-motion: no-preference) {
   :root[data-theme-switching] body,
-  :root[data-theme-switching] :is(.sidebar, .topbar, .card, dialog, .notice, .saved-network-menu) {
+  :root[data-theme-switching] :is(.sidebar, .topbar, .card, dialog, .notice, .saved-network-menu, .proxy-select-menu) {
     transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
   }
 }
