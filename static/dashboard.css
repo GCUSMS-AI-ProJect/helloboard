@@ -89,7 +89,7 @@
   );
 }
 .metric-card h2 {
-  font-size: 16px;
+  font-size: 15px;
   color: var(--muted);
   font-weight: 500;
 }
@@ -97,13 +97,14 @@
   display: block;
   font-size: 30px;
   font-weight: 550;
-  letter-spacing: -1px;
-  line-height: 1.4;
+  letter-spacing: -0.4px;
+  line-height: 1.25;
   font-variant-numeric: tabular-nums;
 }
 .metric-card p {
   min-height: 26px;
   color: var(--muted);
+  font-size: 14px;
   overflow-wrap: anywhere;
 }
 .metric-visual {
@@ -147,11 +148,16 @@
 }
 .dashboard-card h2 {
   font-size: 17px;
-  letter-spacing: -0.3px;
+  line-height: 1.4;
+  letter-spacing: normal;
   margin-bottom: 10px;
 }
 .section-heading h2 {
   margin-bottom: 0;
+}
+.chart-grid .section-heading > .muted,
+.chart-legend {
+  font-size: 14px;
 }
 .chart-legend {
   justify-content: flex-start;
@@ -233,8 +239,10 @@
   height: 1px;
   background: var(--line);
 }
-.data-list {
+.dashboard-shell .data-list {
   margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
   font-variant-numeric: tabular-nums;
 }
 .dashboard-shell .data-list > div {
@@ -271,7 +279,6 @@
 }
 .compact-stats dd {
   text-align: left;
-  font-size: 15px;
 }
 .dashboard-shell .interface-stats > .wide-stat {
   grid-column: 1 / -1;
@@ -319,7 +326,7 @@
   place-items: center;
   font-size: 13px;
   font-weight: 550;
-  letter-spacing: -0.5px;
+  letter-spacing: normal;
 }
 .resource-summary {
   display: flex;
@@ -380,6 +387,7 @@
 }
 .item-heading strong {
   font-weight: 550;
+  font-size: 15px;
   min-width: 0;
 }
 .item-heading .badge {
@@ -387,7 +395,6 @@
   font-size: 14px;
 }
 .service-name {
-  font-size: 16px;
   overflow-wrap: anywhere;
 }
 /* State uses semantic colors; autostart configuration stays gray text. */
@@ -643,7 +650,7 @@
   display: none;
 }
 .process-card .process-table .process-memory-cell {
-  width: 76px;
+  width: 68px;
 }
 .process-card .process-table .process-action-cell {
   width: 40px;
@@ -651,9 +658,13 @@
   overflow: visible;
 }
 .process-name {
-  display: block;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  line-height: 1.45;
 }
 .process-mobile-note {
   white-space: normal;

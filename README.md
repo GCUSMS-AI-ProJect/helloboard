@@ -19,7 +19,7 @@
   <a href="docs/project-guide.md">中文指南</a>
 </p>
 
-![HelloBoard system dashboard with resource cards, live charts, and network interfaces](docs/images/system-light.png)
+[![Full HelloBoard system dashboard in light mode with populated charts, device information, and a process table](docs/images/system-light.png)](docs/images/system-light.png)
 
 ## Features
 
@@ -38,7 +38,7 @@ HelloBoard uses Flask, Waitress, and browser-native HTML, CSS, and JavaScript. I
 
 ### System dashboard · dark theme
 
-![Dark system dashboard with live resource charts](docs/images/system-dark.png)
+[![Full HelloBoard system dashboard in dark mode with CPU, memory, and network traffic charts](docs/images/system-dark.png)](docs/images/system-dark.png)
 
 ### Wi-Fi management
 
@@ -58,7 +58,7 @@ HelloBoard uses Flask, Waitress, and browser-native HTML, CSS, and JavaScript. I
 
 <img src="docs/images/wifi-mobile.png" alt="Wi-Fi configuration on a phone" width="360">
 
-The screenshots use example device, network, and proxy settings.
+The screenshots use example device, chart, network, and proxy data.
 
 ## Quick start
 
