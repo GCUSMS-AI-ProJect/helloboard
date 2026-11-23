@@ -3,6 +3,15 @@
 <p align="center">A browser dashboard for monitoring Linux devices and managing their Wi-Fi.</p>
 
 <p align="center">
+  <a href="#raspberry-pi-os-debian-or-ubuntu"><img src="https://img.shields.io/badge/Raspberry%20Pi-OS-A22846?style=flat-square" alt="Raspberry Pi OS"></a>
+  <a href="#platform-support"><img src="https://img.shields.io/badge/Platform-Linux-374151?style=flat-square" alt="Linux"></a>
+  <a href="#docker-image"><img src="https://img.shields.io/badge/Deployment-Docker-1D63ED?style=flat-square" alt="Docker deployment"></a>
+  <a href="docs/getting-started.md"><img src="https://img.shields.io/badge/Python-3.10%2B-306998?style=flat-square" alt="Python 3.10 or later"></a>
+  <a href="#wi-fi-management"><img src="https://img.shields.io/badge/Network-Wi--Fi-146A55?style=flat-square" alt="Wi-Fi management"></a>
+  <a href="#bash-proxy"><img src="https://img.shields.io/badge/Proxy-Bash-51408D?style=flat-square" alt="Bash proxy"></a>
+</p>
+
+<p align="center">
   <a href="#features">Features</a> ·
   <a href="#screenshots">Screenshots</a> ·
   <a href="#quick-start">Quick start</a> ·
