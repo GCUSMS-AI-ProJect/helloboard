@@ -1508,7 +1508,7 @@ body.panel-open {
 .proxy-fields:has(#protocol) { grid-template-columns: minmax(6rem, .62fr) minmax(0, 1.6fr) minmax(5rem, .55fr); }
 .proxy-advanced { padding-top: 1rem; border-top: 1px solid var(--border); }
 .proxy-fields input, .proxy-advanced input, .proxy-fields select { width: 100%; margin-top: .4rem; }
-.proxy-fields select {
+.proxy-fields select, .proxy-dns select {
   height: 46px;
   border: 1px solid var(--control-border);
   border-radius: 9px;
@@ -1517,10 +1517,11 @@ body.panel-open {
   font: inherit;
   padding: 0 .65rem;
 }
-.proxy-fields select:focus-visible {
+.proxy-fields select:focus-visible, .proxy-dns select:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px var(--focus-halo);
 }
+.proxy-dns:not([hidden]) { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
 .proxy-advanced small { display: block; margin-top: .4rem; }
 .proxy-actions { display: flex; gap: .6rem; flex-wrap: wrap; }
 .proxy-card form > p { margin: 0; }

@@ -12,7 +12,7 @@ import tempfile
 SOURCE = '[ -r "$HOME/.proxy.sh" ] && source "$HOME/.proxy.sh"'
 LEGACY = {"source ~/.proxy.sh", "source ~/.proxyt.sh", SOURCE}
 MARK = "# Managed by HelloBoard"
-PROTOCOLS = {"http", "https", "socks5h"}
+PROTOCOLS = {"http", "https", "socks5", "socks5h"}
 DOMAIN = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?")
 
 def valid_host(value):

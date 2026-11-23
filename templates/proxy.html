@@ -7,6 +7,8 @@
     <main id="main" class="shell">
       <section class="card proxy-card">
         <h2 data-i18n="终端代理">终端代理</h2>
+        {% set socks_selected = settings.protocol in ('socks5', 'socks5h') %}
+        {% set selected_protocol = 'socks5' if socks_selected else settings.protocol %}
         <form id="proxy-form">
           <div id="proxy-mode" class="mode-switch" role="group" aria-label="终端代理" data-mode="{{ 'on' if settings.enabled else 'off' }}">
             {% for value, label, icon in [('on','启用代理','i-language'),('off','关闭代理','i-stop')] %}
@@ -20,8 +22,8 @@
             {% if settings.protocol is defined %}
             <label><span data-i18n="代理协议">代理协议</span>
               <select id="protocol">
-                {% for value, label in [('http', 'HTTP'), ('https', 'HTTPS'), ('socks5h', 'SOCKS5')] %}
-                <option value="{{ value }}"{% if value == settings.protocol %} selected{% endif %}>{{ label }}</option>
+                {% for value, label in [('http', 'HTTP'), ('https', 'HTTPS'), ('socks5', 'SOCKS5')] %}
+                <option value="{{ value }}"{% if value == selected_protocol %} selected{% endif %}>{{ label }}</option>
                 {% endfor %}
               </select>
             </label>
@@ -30,6 +32,13 @@
             <label><span data-i18n="端口">端口</span><input id="port" type="number" required min="1" max="65535" value="{{ settings.port }}"></label>
           </div>
           {% if settings.protocol is defined %}
+          <label id="dns-field" class="proxy-dns"{% if not socks_selected %} hidden{% endif %}>
+            <span data-i18n="DNS 解析">DNS 解析</span>
+            <select id="proxy-dns">
+              <option value="socks5h" data-i18n="代理端解析">代理端解析</option>
+              <option value="socks5" data-i18n="本机解析"{% if settings.protocol == 'socks5' %} selected{% endif %}>本机解析</option>
+            </select>
+          </label>
           <div class="proxy-advanced">
             <label><span data-i18n="直连列表">直连列表</span>
               <input id="bypass" maxlength="512" value="{{ settings.bypass }}" placeholder="localhost,127.0.0.1,.local" aria-describedby="bypass-hint" autocomplete="off" spellcheck="false">

@@ -35,6 +35,12 @@ let pendingSave;
 const form = el("proxy-form");
 const saveButton = form.querySelector("button[type=submit]");
 const testButton = el("test-connection");
+const protocol = el("protocol");
+if (protocol) {
+  protocol.addEventListener("change", () => {
+    el("dns-field").hidden = protocol.value !== "socks5";
+  });
+}
 function cancelTest() {
   testRequest?.abort();
   if (el("proxy-test").open) el("proxy-test").close();
@@ -48,8 +54,8 @@ async function applySettings(save) {
   el("host").required = enabled || !save;
   if (!form.reportValidity()) return;
   const settings = {enabled, host, port: el("port").valueAsNumber};
-  if (el("protocol")) {
-    settings.protocol = el("protocol").value;
+  if (protocol) {
+    settings.protocol = protocol.value === "socks5" ? el("proxy-dns").value : protocol.value;
     settings.bypass = el("bypass").value.trim();
     settings.timeout = el("timeout").valueAsNumber;
   }

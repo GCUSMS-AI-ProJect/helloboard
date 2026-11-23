@@ -14,6 +14,7 @@ window.HelloBoardI18n = (() => {
     "关闭代理": "Disable proxy", "点击保存设置以应用": "Save settings to apply",
     "代理": "Proxy", "终端代理": "Terminal proxy", "启用代理": "Enable proxy", "代理主机": "Proxy host", "端口": "Port", "保存设置": "Save settings",
     "代理协议": "Proxy protocol", "直连列表": "Bypass list",
+    "DNS 解析": "DNS resolution", "代理端解析": "Resolve at proxy", "本机解析": "Resolve locally",
     "用逗号分隔，列表中的地址直接连接。": "Use commas to separate addresses that connect directly.",
     "测试超时（秒）": "Test timeout (s)", "测试连接": "Test connection", "代理连接成功": "Proxy connection succeeded",
     "设置在新终端生效。当前终端可运行": "Settings apply to new terminals. In the current terminal, run",
