@@ -1,25 +1,60 @@
 <h1 align="center">HelloBoard</h1>
 
-<p align="center">A lightweight system dashboard for Linux devices.</p>
+<p align="center">A browser dashboard for monitoring Linux devices and managing their Wi-Fi.</p>
 
-Monitor system resources, manage processes, and configure WiFi from a desktop or phone. Built with Flask, Waitress, and plain HTML, CSS, and JavaScript. No Node.js, database, or external CDN required.
+<p align="center">
+  <a href="#features">Features</a> ·
+  <a href="#screenshots">Screenshots</a> ·
+  <a href="#quick-start">Quick start</a> ·
+  <a href="#docker">Docker</a> ·
+  <a href="docs/project-guide.md">中文指南</a>
+</p>
 
-![HelloBoard system dashboard](docs/images/system-light.png)
+![HelloBoard system dashboard with resource cards, live charts, and network interfaces](docs/images/system-light.png)
 
 ## Features
 
-- CPU, memory, storage, network traffic, and hardware metrics where available.
-- Live charts with shared, in-memory history across page reloads.
-- Process search, sorting, and bulk termination with system-account verification.
-- WiFi scanning, saved networks, and AP mode on supported Linux systems.
-- Light and dark themes, English and Chinese, and compact or spacious layouts.
-- Responsive navigation, subtle dividers, local fonts, and SVG icons.
+| Feature | What you can do |
+| --- | --- |
+| System monitoring | Track CPU, memory, disk, network traffic, uptime, and hardware metrics where available. Live charts share in-memory history across browsers. |
+| Process management | Search and sort processes by CPU or memory. On supported Linux deployments, verify your system account to terminate selected processes. |
+| Wi-Fi and device hotspot | Scan for networks, reconnect to saved networks, and switch between Wi-Fi and hotspot mode on compatible NetworkManager devices. |
+| Setup hotspot | On first startup with host Wi-Fi control, give NetworkManager 60 seconds by default to join a network. If it cannot connect in time, open the setup hotspot and retain the saved configuration. |
+| Bash proxy | Test an HTTP proxy before saving it to the host user's Bash configuration, and turn it off from the same page. Requires the host proxy service. |
+| Responsive interface | Use the dashboard on desktop or mobile in English or Chinese, with light and dark themes and compact or spacious layouts. |
+
+HelloBoard uses Flask, Waitress, and browser-native HTML, CSS, and JavaScript. It serves its fonts and icons locally. See the benchmark summary for the sampling design and historical memory and transfer measurements. [Benchmark summary](docs/benchmarks.md)
+
+## Screenshots
+
+### System dashboard · dark theme
+
+![Dark system dashboard with live resource charts](docs/images/system-dark.png)
+
+### Wi-Fi management
+
+![Wi-Fi management page with saved connection settings and nearby networks](docs/images/wifi-desktop.png)
+
+### Device hotspot
+
+![Device hotspot settings with an example network name and address](docs/images/wifi-hotspot.png)
+
+### Bash proxy
+
+![Bash proxy page with the enable switch, host, port, and save button](docs/images/proxy-settings.png)
+
+### Mobile layout
+
+<img src="docs/images/wifi-mobile.png" alt="Wi-Fi configuration on a phone" width="360">
+
+The screenshots use example device, network, and proxy settings.
 
 ## Quick start
 
-Requires Python 3.10+.
+Use Python 3.10 or later. On Debian, Ubuntu, and Raspberry Pi OS, install the prerequisites and run:
 
 ```bash
+sudo apt install git python3 python3-venv
 git clone https://github.com/GCUSMS-AI-ProJect/helloboard.git
 cd helloboard
 python3 -m venv .venv
@@ -27,74 +62,67 @@ python3 -m venv .venv
 .venv/bin/python wifi.py --dashboard-only
 ```
 
-Open **http://localhost:8090**. Dashboard mode does not change your network configuration.
+Open [HelloBoard on port 8090](http://localhost:8090) on the device, or use the device's private IP from the same network. Dashboard-only mode leaves the network configuration to the host.
 
-For a Linux system service on port 80:
+### Linux service and Wi-Fi management
+
+Stop the foreground dashboard, then install the systemd service to use port 80.
 
 ```bash
 sudo bash install.sh
 sudo systemctl enable --now helloboard
 ```
 
-WiFi management requires NetworkManager, root privileges, and a compatible wireless adapter. AP mode also requires hotspot support. Use `install.sh --with-wifi` only when you intend to apply the saved network configuration.
+To enable Wi-Fi management on a new installation, run `sudo bash install.sh --with-wifi` in place of the default install command. It requires NetworkManager and a managed adapter. Hotspot mode also requires AP support. The service applies your saved network mode when it starts. [Installation and updates](docs/getting-started.md)
 
-Optional local discovery on Debian / Ubuntu:
-
-```bash
-sudo apt install avahi-daemon
-sudo python3 tools/enable_local_name.py
-```
-
-Then open **http://helloboard.local** from the same local network using an mDNS-capable client.
-
-## Lightweight by design
-
-A single server process shares background sampling across browsers. Static assets use compression and versioned caching; the UI reuses existing elements and stops polling in hidden tabs.
-
-Benchmarks documented in commit [`1b44031`](https://github.com/GCUSMS-AI-ProJect/helloboard/commit/1b44031) on October 26, 2026 recorded **36.5 MiB RSS at startup**, **39.6 MiB after load**, and **52% less initial static-asset transfer** after optimization. These are historical measurements, not a guarantee for the current version. See the [English benchmark summary](docs/benchmarks.md) for conditions and limitations.
-
-## Platform support
-
-Linux is the primary platform, including Raspberry Pi and Ubuntu / Debian devices. Available features depend on hardware and system capabilities. Windows monitoring is implemented but has not been verified on a physical Windows host; WiFi management and process termination are not supported there.
-
-Designed for trusted local networks. Sensitive actions require system-account verification. WiFi credentials remain in the local configuration; do not expose the dashboard directly to the public internet.
-
-## Documentation
-
-- [Installation, updates, and troubleshooting](docs/getting-started.md)
-- [Benchmark summary](docs/benchmarks.md)
-- [UI design prompt](PROMPT.md) (Chinese)
-- [Project guide and installation](docs/project-guide.md) (Chinese)
-- [Deployment and local discovery](docs/operations.md) (Chinese)
-- [Performance measurements](docs/performance.md) (Chinese)
-- [Offline Ubuntu amd64 package](docs/deb.md) (Chinese)
-- [Font sources and licenses](static/fonts/SOURCES.md)
-
-## Feedback
-
-Report bugs or request features through [GitHub Issues](https://github.com/GCUSMS-AI-ProJect/helloboard/issues). Include your OS, architecture, Python version, commit, and steps to reproduce. Remove passwords and other private data from logs and screenshots.
-
-## License
-
-No project-level license has been selected yet. This repository does not currently grant an open-source license for HelloBoard's own code. Third-party components retain their respective licenses: see [fonts](static/fonts/SOURCES.md), [Lucide icons](static/lucide-LICENSE.txt), and [bundled runtime notices](packaging/deb/runtime-licenses).
+For local discovery on Debian or Ubuntu, install `avahi-daemon` and run `sudo python3 tools/enable_local_name.py`. Open [helloboard.local](http://helloboard.local) on the same network from an mDNS-capable client. [Local discovery guide](docs/operations.md)
 
 ## Docker
 
-Build with `docker build -t helloboard .`. Start the dashboard with
-`docker run --rm -p 127.0.0.1:8090:8090 helloboard`.
+Build and start a system dashboard on the Docker host:
 
-To display the Linux host's Wi-Fi connection and cached scan results, run
-`python3 tools/export_wifi_snapshot.py ./wifi-cache --interface wlan0` on the host
-every 15 seconds. Start the container with the directory mounted read-only:
+```bash
+docker build -t helloboard .
+docker run --rm -p 127.0.0.1:8090:8090 helloboard
+```
 
-```sh
+For read-only host Wi-Fi status, run the snapshot exporter on the host every 15 seconds:
+
+```bash
+python3 tools/export_wifi_snapshot.py ./wifi-cache --interface wlan0
+```
+
+Mount the snapshot directory when starting the container:
+
+```bash
 docker run --rm -p 127.0.0.1:8090:8090 \
   -v "$PWD/wifi-cache:/run/helloboard-wifi:ro" \
   helloboard --wifi-snapshot /run/helloboard-wifi/latest.json --interface wlan0
 ```
 
-Replace wlan0 with the host adapter name in both commands. Snapshots expire after
-90 seconds. Network changes and process control are disabled in snapshot mode.
-For optional panel login, mount a private Werkzeug password hash file at
-`/home/helloboard/.helloboard-password-hash` readable by the container user.
-Host installations continue to use the native installer and PAM.
+Replace `wlan0` with the host adapter in both commands. Snapshots expire after 90 seconds. For optional snapshot-mode panel login, mount a private Werkzeug password hash at `/home/helloboard/.helloboard-password-hash` and grant the container user read access.
+
+For a Raspberry Pi container with host Wi-Fi management and the Bash proxy panel, use the deployment repository. It provisions the host services that the container calls. [Raspberry Pi Docker deployment](https://github.com/GCUSMS-AI-ProJect/hello_docker_pi)
+
+## Platform support
+
+Linux is the primary platform. Available metrics and controls depend on system permissions and hardware. The Windows scripts enable monitoring, with physical Windows-host verification still pending. Use HelloBoard on a trusted local network and keep device credentials in the local configuration. [Supported platforms and permissions](docs/getting-started.md)
+
+## Documentation
+
+- [Installation, updates, and troubleshooting](docs/getting-started.md)
+- [Benchmark summary](docs/benchmarks.md)
+- [UI design prompt (Chinese)](PROMPT.md)
+- [Project guide and installation (Chinese)](docs/project-guide.md)
+- [Deployment and local discovery (Chinese)](docs/operations.md)
+- [Performance measurements (Chinese)](docs/performance.md)
+- [Offline Ubuntu amd64 package (Chinese)](docs/deb.md)
+- [Font sources and licenses](static/fonts/SOURCES.md)
+
+## Feedback
+
+Include your OS, architecture, Python version, commit, and reproduction steps when reporting an issue. Remove private information from logs and screenshots. [GitHub Issues](https://github.com/GCUSMS-AI-ProJect/helloboard/issues)
+
+## License
+
+HelloBoard's own code currently has no project-level license. Third-party assets and runtimes retain their respective licenses. [Fonts](static/fonts/SOURCES.md) · [Lucide icons](static/lucide-LICENSE.txt) · [Bundled runtime notices](packaging/deb/runtime-licenses)
